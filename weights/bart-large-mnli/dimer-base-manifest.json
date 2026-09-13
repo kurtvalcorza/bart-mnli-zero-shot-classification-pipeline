@@ -1,0 +1,45 @@
+{
+  "format": "dimer_hf_snapshot",
+  "formatVersion": 1,
+  "modelKey": "bart-large-mnli",
+  "modelId": "facebook/bart-large-mnli",
+  "revision": "d7645e127eaf1aefc7862fd59a17a5aa8558b8ce",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3793,
+      "sha256": "d022b7cb54ca2f65fac41cf6c9601b4491b4ac22a301227288a38beef2a18aeb"
+    },
+    {
+      "path": "config.json",
+      "bytes": 1154,
+      "sha256": "a0f9bcb245b680a96ccae0ad8d155f267ec3e3c971ef4a4937e52ea9ba368a86"
+    },
+    {
+      "path": "merges.txt",
+      "bytes": 456318,
+      "sha256": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5"
+    },
+    {
+      "path": "model.safetensors",
+      "bytes": 1629437147,
+      "sha256": "cfbb687dbbd9df99fe865e1860350a22aebac4d26ee4bcb50217f1df606a018e"
+    },
+    {
+      "path": "tokenizer.json",
+      "bytes": 1355863,
+      "sha256": "847bbeab6174d66a88898f729d52fa8d355fafe1bea101cf960dd404581df70e"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "bytes": 26,
+      "sha256": "5e04eb606e3a1583530a42e36c2a6b6615c86f34fe77e44d9ddeb43ff940931f"
+    },
+    {
+      "path": "vocab.json",
+      "bytes": 898822,
+      "sha256": "06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab"
+    }
+  ],
+  "totalBytes": 1632153123
+}
