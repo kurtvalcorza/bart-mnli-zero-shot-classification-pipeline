@@ -3,6 +3,8 @@ license: mit
 model_card_spec: "1.1"
 pipeline_tag: zero-shot-classification
 base_model: facebook/bart-large-mnli
+date_published: "2019-11"
+date_published_source: "fairseq BART code+checkpoint release, examples/bart first commit 2019-11-09 (facebookresearch/fairseq#902); Hub history begins 2020-02-12"
 ---
 
 # BART-large MNLI (DIMER package v0.1.0) — NLI Sequence Classifier (Zero-Shot Text Classification)
@@ -11,7 +13,6 @@ base_model: facebook/bart-large-mnli
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-facebookresearch%2Ffairseq-181717?style=flat&logo=github&logoColor=white)](https://github.com/facebookresearch/fairseq/tree/main/examples/bart)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-1910.13461-b31b1b.svg)](https://arxiv.org/abs/1910.13461)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Pipeline](https://img.shields.io/badge/Pipeline-bart--mnli--zero--shot--classification--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/bart-mnli-zero-shot-classification-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -28,7 +29,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 `facebook/bart-large-mnli` is the BART-large checkpoint (Lewis et al., arXiv:1910.13461) after fine-tuning on the MultiNLI natural-language-inference dataset, published by Facebook AI on the Hugging Face Hub and pinned here to revision `d7645e127eaf1aefc7862fd59a17a5aa8558b8ce`. BART is a denoising sequence-to-sequence Transformer: a 12-layer bidirectional encoder and a 12-layer autoregressive decoder with `d_model` 1024, 16 attention heads, a 50 265-entry byte-level BPE vocabulary and 1024 positions (snapshot `config.json`), 407 344 133 float32 parameters in the pinned `model.safetensors` (counted from the SafeTensors header). The MNLI fine-tune replaced generation with a three-way classification head (`contradiction`, `neutral`, `entailment`) read from the decoder's final end-of-sequence state. Zero-shot classification follows Yin et al. (arXiv:1909.00161), as the upstream README describes: the text to classify is the NLI premise, each caller-supplied label is inserted into the hypothesis template `This example is {label}.` (`HYPOTHESIS_TEMPLATE`), and the entailment and contradiction logits of each pair become a per-label score. No adaptation happens in this repository — no training, fine-tuning or in-context conditioning; the pinned checkpoint is used as published. What this repository adds is packaging: the `BARTZeroShotClassificationPipeline` class in `src/bart_zero_shot_classification_pipeline/pipeline.py`, digest verification of the local snapshot (`verify_snapshot`, `stage_missing_files`), input validation against named ceilings, the score conversion in NumPy, and a fixed output contract.
 
