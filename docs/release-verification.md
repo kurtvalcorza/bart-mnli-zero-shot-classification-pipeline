@@ -64,7 +64,7 @@ Before changing the registry status from `Candidate` to `Release-grade`:
    defaults for the sample path: `USE_BYOD = False`, `MULTI_LABEL = False`);
 4. verify that Section 1 reports `NOTEBOOK_SOURCE.repository_revision` equal to the revision recorded in
    `metadata.dimer.generated_from` and that the installed core package versions equal the inline `PINS` (= the
-   `pyproject.toml` pins (`torch==2.14.0`,
+   `pyproject.toml` pins (`torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`,
    `transformers==4.57.6`, `tokenizers==0.22.2`, `huggingface-hub==0.36.2`, `safetensors==0.8.0`,
    `numpy==2.5.3`);
 5. verify every default-path stage completes:
