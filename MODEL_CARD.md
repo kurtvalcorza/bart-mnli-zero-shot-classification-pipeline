@@ -2,6 +2,7 @@
 license: mit
 model_card_spec: "1.1"
 pipeline_tag: zero-shot-classification
+task: "Others - Zero-Shot Text Classification"
 base_model: facebook/bart-large-mnli
 date_published: "2019-11"
 date_published_source: "fairseq BART code+checkpoint release, examples/bart first commit 2019-11-09 (facebookresearch/fairseq#902); Hub history begins 2020-02-12"
