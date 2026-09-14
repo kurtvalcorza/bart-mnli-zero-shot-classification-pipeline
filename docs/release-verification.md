@@ -104,7 +104,7 @@ A known-failing default path in the supported runtime blocks release.
 
 | Notebook | Commit / notebook blob | Date (UTC) | Executor | Outcome |
 |---|---|---|---|---|
-| `tutorials/bart_zero_shot_classification_colab.ipynb` | | | | pending — queued to the GPU lane |
+| `tutorials/bart_zero_shot_classification_colab.ipynb` | `34098a7` / `f8a761ce5419` | 2026-09-14 | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | PASS — 8/8 cells ok (1 restart after install cell); 4 outputs verified |
 
 ## Recorded executions
 
@@ -120,9 +120,7 @@ repository are the pipeline smoke run documented in `MODEL_CARD.md` (Windows ven
 `dancing` 0.0057, `cooking` 0.0018). That run exercised the package, not this
 notebook, and is not notebook execution evidence.
 
-| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
-|---|---|---|---|---|---|
-| — | — | — | Default sample path | — | pending — queued to the GPU lane |
+| 2026-09-14 | `34098a7` / `f8a761ce5419` | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | Default sample path | 280.7 s | **PASSED** — 8/8 code cells executed cleanly (1 restart after install cell), 4 outputs verified, 16 weights staged (1632 MB) |
 
 ## Current status
 
