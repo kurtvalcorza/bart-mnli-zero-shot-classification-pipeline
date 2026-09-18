@@ -129,7 +129,7 @@ A known-failing default path in the supported runtime blocks release (REL11).
 
 | Notebook | Commit / notebook blob | Date (UTC) | Executor | Outcome |
 |---|---|---|---|---|
-| `bart_zero_shot_classification_colab.ipynb` (`E2E`) | `__LOCAL_ROW__` | 2026-09-19 | Local pre-flight harness (Windows, CPython 3.12.10, CPU, `google.colab` shim, pins pre-installed) | PASS — pre-flight only, **not** promotion evidence |
+| `bart_zero_shot_classification_colab.ipynb` (`E2E`) | `2559a76` / `9c599285` | 2026-09-19 | Local pre-flight harness (Windows, CPython 3.12.10, CPU, `google.colab` shim, pins pre-installed) | PASS — pre-flight only, **not** promotion evidence |
 | `bart_zero_shot_classification_colab.ipynb` (`TASK-INFERENCE`, superseded) | `34098a7` / `f8a761ce5419` | 2026-09-14 | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | PASS — 8/8 cells ok (1 restart after install cell), 4 outputs verified; evidence for the earlier inference-only notebook, not for the `E2E` blob |
 
 ## Recorded executions
@@ -141,7 +141,7 @@ stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
-| 2026-09-19 | `__LOCAL_ROW__` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | `__LOCAL_EXEC__` |
+| 2026-09-19 | `2559a76` / `9c599285` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | Default sample path (install skipped, pins pre-installed → three carried modules → inline manifest assert → `stage_missing_files` fetched 0 of 7 entries because the snapshot was pre-staged → `verify_snapshot` 7 files → `from_pretrained` on CPU → `fetch_corpus` served from the pre-staged cache after its digest checks → 10,003 + 3,080 rows read, 400 / 100 / 200 balanced records drawn with `check_split_disjoint` clean and digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…` → four dataset refusals → input manifest + duplicate-label refusal probe → three synthetic sentences classified in both score modes with every sanity check `True` → majority baseline → frozen evaluation → `adapt` → validation + test evaluation → ten unseen messages → adapter export → reload parity) | 342.1 s | **PASSED** — 11/11 code cells; majority accuracy 10.0 / macro-F1 1.82; frozen zero-shot test 82.5 / 81.39 (54.2 s; per-label F1 from 33.3 on `ATM support` to 100 on three phrases); `adapt` 34,646,019 of 407,344,131 params, 800 pairs from 400 messages, 2 epochs, 192.6 s, validation accuracy 84.0 → 96.0 → 98.0 (`best_epoch` 2, train loss 0.289 → 0.167); **adapted test accuracy 97.0 / macro-F1 96.99 (Δ +14.5 / +15.6; every per-label F1 ≥ 92.3)**; ten unseen messages `sample-sanity` accuracy 0.8, `measured-small-sample`; adapter 138,590,612 B / 56 tensors, SHA-256 `30e53f03…`; reload parity 8/8; six exports written. Pre-flight; hosted clean-runtime run still required |
 | 2026-09-14 | `34098a7` / `f8a761ce5419` (`TASK-INFERENCE`, superseded) | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | Default sample path of the inference-only notebook: three synthetic sentences, `stage_missing_files` fetching `model.safetensors` from the Hub, `verify_snapshot`, `classify` in both modes, `sample-sanity` report | 280.7 s | **PASSED** — 8/8 code cells (1 restart after the install cell), 4 outputs verified, 1632 MB staged; does not cover the `E2E` blob |
 
 ## Current status
