@@ -83,7 +83,11 @@ def test_par1_rewrite_rules_are_the_only_difference() -> None:
             if tag == "equal":
                 continue
             replaced = b[j1:j2]
-            assert replaced and all("standalone rewrite" in line for line in replaced), (module, a[i1:i2], replaced)
+            assert replaced and all("standalone rewrite" in line for line in replaced), (
+                module,
+                a[i1:i2],
+                replaced,
+            )
             rule_hits += sum("__file__" in line for line in a[i1:i2])
     assert rule_hits == len(REWRITES)
 
