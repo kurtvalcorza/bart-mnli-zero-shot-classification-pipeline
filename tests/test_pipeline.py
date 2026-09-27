@@ -199,7 +199,14 @@ def test_classify_single_label_mode_softmaxes_entailment_across_labels():
     scores = [entry["score"] for entry in result["labels"]]
     assert scores == sorted(scores, reverse=True)
     assert sum(scores) == pytest.approx(1.0)
-    assert set(result["labels"][0]) == {"label", "score", "entailment_logit", "contradiction_logit"}
+    assert set(result["labels"][0]) == {
+        "label",
+        "score",
+        "entailment_logit",
+        "neutral_logit",
+        "contradiction_logit",
+    }
+    assert result["labels"][0]["neutral_logit"] == pytest.approx(0.0)
     assert result["labels"][0]["entailment_logit"] == pytest.approx(4.0)
     assert result["n_tokens"] == 4 + 4 + 4  # words in text + longest hypothesis + specials
 

@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 GENERATOR_VERSION = "build_notebook.py/2"
-NOTEBOOK_SPEC = "2.0"
+NOTEBOOK_SPEC = "2.2"
 
 # ST2: default rewrite rule; a template may replace it with its own `rewrites` list. Every rule must
 # match exactly once across the embedded modules, so a silent no-op is impossible.
@@ -98,6 +98,7 @@ def template_contract() -> dict[str, str]:
         "model_load": "OPTIONAL replacement for the default `<pipeline_class>.from_pretrained(weights_dir=WEIGHTS_DIR)` expression",
         "package_dir": "OPTIONAL repository-relative directory of the package (default 'src/<package>'; e.g. 'mitra_pipeline' for a root-level package)",
         "pins_file": "OPTIONAL repository-relative requirements file that REPLACES pyproject dependencies as the inline PINS: one `name==ver` or `name @ git+url@sha` per line; `--index-url URL`, `--extra-index-url URL`, `--find-links URL` lines are honoured (passed to pip in order); comments/blank lines ignored",
+        "infrastructure_labels": "OPTIONAL bool (default False): label Sections 1-3 as Infrastructure and collapse the carried-module source (NOTEBOOK_SPEC 2.2 GDL11)",
         "model_host": "OPTIONAL {name, reference_url, revision_label} for a non-Hub checkpoint host (default: Hugging Face Hub, https://huggingface.co/<MODEL_ID>, 'revision'); the package's own stage_missing_files downloader must fetch from it",
     }
 
@@ -401,6 +402,14 @@ def _declarations(template: dict[str, Any]) -> tuple[str, str, str]:
 def render(repo: Path, template: dict[str, Any], revision: str | None = None) -> dict[str, Any]:
     ctx = load_context(repo, template, revision)
     mode, run_all, byod = _declarations(template)
+    # GDL11 (NOTEBOOK_SPEC 2.2 §3.5): an opt-in label on the setup sections, and collapsed carried-module source.
+    infra = (
+        "> **Infrastructure.** You may run this section without studying its implementation; the learning "
+        "activities start after Section 3.\n\n"
+        if template.get("infrastructure_labels")
+        else ""
+    )
+    hidden = {"jupyter": {"source_hidden": True}} if template.get("infrastructure_labels") else {}
     stem = template["stem"]
     fmt = {"stem": stem, **{k: ctx[k] for k in ("MODEL_ID", "MODEL_REVISION", "MODEL_LICENSE", "MODEL_KEY")}}
     cells: list[dict[str, Any]] = []
@@ -448,7 +457,8 @@ def render(repo: Path, template: dict[str, Any], revision: str | None = None) ->
     add(
         _md(
             "## 1. Install the pinned runtime\n\n"
-            "The dependency set is pinned exactly (the same pins as the repository's " + (template.get('pins_file') or 'pyproject.toml') + " at the generating revision; any `--index-url`/`--find-links` lines are passed to pip as written) and "
+            + infra
+            + "The dependency set is pinned exactly (the same pins as the repository's " + (template.get('pins_file') or 'pyproject.toml') + " at the generating revision; any `--index-url`/`--find-links` lines are passed to pip as written) and "
             "installed directly — there is no repository clone and no package install. If a pin replaces a distribution this runtime has already "
             "imported, the cell stops with a restart instruction rather than continuing with mixed versions. Look for a dictionary reporting the "
             "notebook's source revision, Python, " + ", ".join(f"`{m}`" for m in imports) + " versions, and whether CUDA is available."
@@ -486,10 +496,11 @@ def render(repo: Path, template: dict[str, Any], revision: str | None = None) ->
                 "names are already defined by the preceding cells). The repository's parity test (`tests/test_notebook_parity.py`) fails whenever "
                 "these cells and the modules diverge, so what you run here is what the repository tests. Nothing in these cells runs a model yet."
             )
-            add(_md(title + intro + f"\n\n**Module {i + 1}/{n_mod}:** `{rel}`"))
+            label = "\n\n" + infra.rstrip("\n") if infra else ""
+            add(_md(title + label + intro + f"\n\n**Module {i + 1}/{n_mod}:** `{rel}`"))
         else:
             add(_md(f"**Module {i + 1}/{n_mod}:** `{rel}` (carried verbatim; see the note above)"))
-        add(_code(ctx["embedded"][m], {"dimer": {"embedded_module": rel, "module_sha256": ctx["per_module_sha256"][rel]}}))
+        add(_code(ctx["embedded"][m], {**hidden, "dimer": {"embedded_module": rel, "module_sha256": ctx["per_module_sha256"][rel]}}))
 
     manifest_literal = json.dumps(ctx["manifest"], indent=2, ensure_ascii=False)
     n_files = len(ctx["manifest"]["files"])
@@ -502,7 +513,8 @@ def render(repo: Path, template: dict[str, Any], revision: str | None = None) ->
     add(
         _md(
             "## 3. Pin, stage and verify the model\n\n"
-            f"The model identity is carried twice — `MODEL_ID`/`MODEL_REVISION` in the module above and the `{n_files}`-file manifest below (paths, "
+            + infra
+            + f"The model identity is carried twice — `MODEL_ID`/`MODEL_REVISION` in the module above and the `{n_files}`-file manifest below (paths, "
             "byte sizes, SHA-256) — and the cell first asserts they agree. It writes the manifest into the working-directory snapshot, then "
             f"`stage_missing_files(..., allow_download=True)` fetches exactly the entries that are absent from {ctx['host']['name']} **at {ctx['host']['revision_label']} "
             f"`{ctx['MODEL_REVISION'][:12]}…`** (never `main`), `verify_snapshot` re-hashes every file and raises on the first size or digest mismatch, "

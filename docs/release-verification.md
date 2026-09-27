@@ -3,7 +3,7 @@
 `tutorials/bart_zero_shot_classification_colab.ipynb` (`E2E`, **standalone** carrier) is a **release candidate**
 until the exact notebook revision has executed top-to-bottom in a clean supported runtime. Unit tests, JSON
 validation, code-cell compilation, the generator parity checks and `tools/validate_release_assets.py` are necessary
-checks but are **not** runtime evidence under DIMER Notebook Specification 2.0 (REL8). This file is the durable
+checks but are **not** runtime evidence under DIMER Notebook Specification 2.2 (REL8). This file is the durable
 release-gate record for the notebook.
 
 ## Automatic coverage (static, every pull request)
@@ -13,7 +13,7 @@ CI runs `tools/validate_release_assets.py`, which checks:
 - notebook JSON parses; every code cell compiles as plain Python (no `%`/`!` magics); no persisted outputs or
   execution counts; no unresolved placeholder markers; every code cell is preceded by an explanatory markdown cell;
 - exactly one tutorial notebook, named in `tutorials/README.md` with its `E2E` profile, the notebook-spec version
-  and the standalone carrier; `metadata.dimer` declares that profile, spec `2.0`, a §3.3 pedagogical mode,
+  and the standalone carrier; `metadata.dimer` declares that profile, spec `2.2`, a §3.3 pedagogical mode,
   `standalone: true` and `generated_from` (repository, revision, module SHA-256, generator);
 - the standalone carrier (ST1–ST8, PAR1–PAR4): no clone, repository install or repository import on the primary
   path; one cell per carried module (`pipeline.py`, `samples.py`, `metrics.py`), each equal to its source after the
@@ -29,11 +29,14 @@ CI runs `tools/validate_release_assets.py`, which checks:
   `BARTZeroShotClassificationPipeline.from_pretrained(weights_dir=...)`, `fetch_corpus` from the pinned cache path,
   `read_corpus` + `build_sample_dataset(seed=SPLIT_SEED)` / `load_byod_dataset`, `validate_dataset` per split,
   `label_names`, `check_split_disjoint`, `write_dataset_csv`, `validate_inputs` with the duplicate-label refusal
-  probe, `pipe.classify` with the sanity checks in both score modes, `majority_baseline`, `pipe.evaluate` on the
-  frozen model and on the validation and test splits after adaptation with the accuracy assertions, `pipe.adapt` with
-  its explicit hyperparameters and template, `evaluation_report` and `pipe.evaluate` on the unseen messages,
-  `pipe.save_artifact`, `BARTZeroShotClassificationPipeline.from_artifact` and the reload-parity assertion, and the
-  provenance fields `weight_format`, `weight_sha256` and the `corpus` block), the six expected `outputs/` paths, the
+  probe, the text-hypothesis pair with its three NLI logits, `pipe.classify` with the sanity checks in both score
+  modes, `majority_baseline` fitted on the training labels, `pipe.evaluate` on the pretrained model and on the
+  validation and test splits after adaptation with the confusion matrices, `paired_changes` between the pretrained and
+  adapted models, the category-wording activity (a freshly loaded pretrained pipeline, description sets A and B,
+  paired changes), `pipe.adapt` with its explicit hyperparameters and template, `evaluation_report` and `pipe.evaluate`
+  on the unseen messages, `pipe.save_artifact` with the classification setup,
+  `BARTZeroShotClassificationPipeline.from_artifact` and the full-test reload-parity assertion, and the
+  provenance fields `weight_format`, `weight_sha256` and the `corpus` block), the seven expected `outputs/` paths, the
   learner-facing statements (an entailment-derived softmax is not a calibrated probability, the argmax rule,
   adaptation with gold labels, the entailment and contradiction pairs, the majority baseline, macro-F1, no dispersion
   estimate, pairs above the token ceiling rejected not truncated, named exclusions, the CC BY 4.0 corpus licence)
@@ -99,23 +102,38 @@ Before changing the registry status from `Candidate` to `Release-grade`:
      and both decision rules surfaced; `validate_inputs` writing `outputs/…_input_manifest.json` (verdict `accepted`,
      one recorded rejection finding from the duplicate-label probe); `pipe.classify` on the three synthetic sentences
      with every sanity check `True` in both score modes (the card-pass smoke gave `travel` 0.9939 on the first);
-   - Section 6: the majority baseline (accuracy 10.0, macro-F1 1.82 on the balanced split) and the frozen zero-shot
-     model's test score (accuracy ≈ 82.50, macro-F1 ≈ 81.39 on CPU float32; `ATM support` and `card arrival`
-     the weakest phrases), with the cell's assertion that the frozen accuracy beats the baseline;
-   - Section 7: `pipe.adapt` printing epoch 0 as the frozen model, 34,646,019 trainable of 407,344,131 parameters,
-     2 pairs per record, and a two-epoch history with validation accuracy rising (≈ 84.00 → 96.00 → 98.00 in the
-     recorded run; `best_epoch` 2);
-   - Section 8: `pipe.evaluate` on the validation and test splits with the three-way comparison and per-label F1 and
-     `outputs/…_evaluation_report.json` written (the cell asserts the adapted test accuracy exceeds the frozen one —
-     on the sample ≈ 97.00 versus ≈ 82.50, macro-F1 ≈ 96.99 versus ≈ 81.39);
-   - Section 9: ten unseen training-file messages (one per intent) classified with `evaluation_report` returning
+   - Section 5 also shows one training message against two hypotheses with entailment, neutral and contradiction
+     logits, and its ranked single-label scores over the ten descriptions;
+   - Section 6: the majority baseline **fitted on the training labels** (all ten tie at 40; the alphabetically first,
+     `ATM support`, is used; accuracy 10.0, macro-F1 1.82) and the pretrained zero-shot model's test score (accuracy
+     ≈ 82.50, macro-F1 ≈ 81.39 on CPU float32; `ATM support` and `card arrival` the weakest descriptions), the
+     per-class table with support and undefined-precision notes, the longest scored pair (60 tokens on the sample)
+     and the confusion matrix; the comparison with the baseline is printed, not asserted;
+   - Section 7: `pipe.adapt` printing epoch 0 as the pretrained model, 34,646,019 trainable of 407,344,131
+     parameters, 2 pairs per record, and a two-epoch history (validation accuracy ≈ 84.00 → 96.00 → 98.00 in the
+     recorded runs; `best_epoch` 2);
+   - Section 8: the three-way comparison on the same 200 test messages with per-class F1 for all three systems, the
+     adapted confusion matrix and the list of categories whose F1 fell (none in the recorded runs), and
+     `outputs/…_evaluation_report.json` written; the improvement is printed, not asserted, so a negative result is
+     recorded rather than stopping the run;
+   - Section 9: paired changes between the pretrained and adapted models (30 corrected, 1 new error, 164 unchanged
+     correct, 3 unchanged incorrect, 2 changed incorrect in the recorded runs) with up to three examples per group in
+     test-split order;
+   - Section 10: the category-wording activity on a freshly loaded, verified pretrained pipeline over the 100
+     validation messages — description sets A and B side by side, accuracy / macro-F1 per set (84.0 / 82.61 and
+     82.0 / 82.38 in the recorded runs), 17 changed predictions (7 correct→incorrect, 5 incorrect→correct, 5 to a
+     different wrong category) — and `outputs/…_description_activity.json` naming the description sets and the
+     checkpoint;
+   - Section 11: ten unseen training-file messages (one per intent) classified with `evaluation_report` returning
      `sample-sanity` and `pipe.evaluate` returning `measured-small-sample`, `outputs/…_predictions.csv` written;
      `pipe.save_artifact` writing `outputs/…_adapter/{adapter.safetensors,manifest.json}` (56 tensors, about 139 MB)
-     and `BARTZeroShotClassificationPipeline.from_artifact` reloading it with 8/8 identical top labels (the cell
-     asserts it); `outputs/…_result.json` written with `NOTEBOOK_SOURCE`, the model identity and licence, the
-     snapshot block (`weight_format`, `weight_sha256`), the `corpus` block with the label set, the inference-contract
-     items, the labels and template, the comparison, the artifact digest, the reload parity, the runtime versions and
-     device;
+     with the category IDs, descriptions, template and scoring configuration in its metadata, and
+     `BARTZeroShotClassificationPipeline.from_artifact` rescoring all 200 test messages with identical predictions,
+     score differences within 1e-5 and identical metrics (the cell asserts it; this is a new pipeline object built
+     from the saved files in the same kernel process); `outputs/…_result.json` written with `NOTEBOOK_SOURCE`, the
+     model identity and licence, the snapshot block (`weight_format`, `weight_sha256`), the `corpus` block with the
+     label set, the inference-contract items, the classification setup, the comparison, the paired changes, the
+     wording-activity summary, the artifact digest, the reload parity, the runtime versions and device;
 6. verify the exports exist and the interpretation section matches the observed path;
 7. record the notebook Git blob id, commit, runtime (platform, Python, PyTorch, Transformers, device), the model
    identifier and immutable revision, whether the model cache, the weights directory and the corpus cache were clean,
@@ -148,4 +166,4 @@ stated runtime, not general estimates.
 
 ## Current status
 
-**Release-grade.** The `E2E` notebook blob `f85282d2` (committed at `5ecf2f2`) executed top-to-bottom in a clean Kaggle Tesla T4 runtime on 2026-09-19 (11/11 ok (1 restart after install cell), 325.3 s, 18 files, 1633 MB fetched from the Hub and digest-verified inside the notebook) with no repository checkout — the REL1/REL10 supported-runtime evidence this file gates on. The local pre-flight rows above are what preceded it and remain history. Any later change to the carried modules or to the notebook produces a new blob, and the registry returns to **Candidate** until a clean run of that blob is recorded here.
+**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean hosted run of the new blob must be recorded here before promotion.

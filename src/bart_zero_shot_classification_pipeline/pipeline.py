@@ -37,6 +37,7 @@ MANIFEST_NAME = "dimer-base-manifest.json"
 HYPOTHESIS_TEMPLATE = "This example is {}."
 # NLI head layout from the snapshot config.json ``label2id``: contradiction 0, neutral 1, entailment 2.
 CONTRADICTION_INDEX = 0
+NEUTRAL_INDEX = 1
 ENTAILMENT_INDEX = 2
 NUM_NLI_LABELS = 3
 # Ceilings. 1024 is max_position_embeddings in config.json and model_max_length in tokenizer_config.json;
@@ -399,6 +400,7 @@ class BARTZeroShotClassificationPipeline:
                 "label": clean[i],
                 "score": float(scores[i]),
                 "entailment_logit": float(logits[i, ENTAILMENT_INDEX]),
+                "neutral_logit": float(logits[i, NEUTRAL_INDEX]),
                 "contradiction_logit": float(logits[i, CONTRADICTION_INDEX]),
             }
             for i in order
@@ -434,7 +436,9 @@ class BARTZeroShotClassificationPipeline:
         hypothesis_template: str = HYPOTHESIS_TEMPLATE,
     ) -> dict[str, Any]:
         """Classify every record's text over `labels` (default: the dataset's own label vocabulary) and
-        score the top labels against the gold labels (accuracy, macro-F1)."""
+        score the top labels against the gold labels (accuracy, macro-F1, per-label counts and the confusion
+        matrix, all over the full label vocabulary). ``predictions`` keeps one entry per record in input
+        order: id, gold, predicted label, its score, every label's score and the pair-token count."""
         from .metrics import classification_metrics
         from .samples import label_names, validate_dataset
 
@@ -443,13 +447,24 @@ class BARTZeroShotClassificationPipeline:
         ]
         label_list = list(labels) if labels is not None else label_names(checked)
         started = time.perf_counter()
-        predicted = [
-            self.classify(
+        predictions = []
+        for r in checked:
+            result = self.classify(
                 r["text"], label_list, multi_label=multi_label, hypothesis_template=hypothesis_template
-            )["top_label"]
-            for r in checked
-        ]
-        metrics = classification_metrics(predicted, [r["label"] for r in checked])
+            )
+            predictions.append(
+                {
+                    "id": r["id"],
+                    "gold": r["label"],
+                    "predicted": result["top_label"],
+                    "score": result["labels"][0]["score"],
+                    "scores": {entry["label"]: entry["score"] for entry in result["labels"]},
+                    "n_tokens": result["n_tokens"],
+                }
+            )
+        metrics = classification_metrics(
+            [p["predicted"] for p in predictions], [r["label"] for r in checked], label_list
+        )
         metrics.update(
             {
                 "labels": label_list,
@@ -460,6 +475,7 @@ class BARTZeroShotClassificationPipeline:
                 "seconds": round(time.perf_counter() - started, 3),
                 "model_id": MODEL_ID,
                 "model_revision": MODEL_REVISION,
+                "predictions": predictions,
             }
         )
         return metrics
