@@ -15,6 +15,8 @@ from bart_zero_shot_classification_pipeline import (
     ARTIFACT_FORMAT,
     DECODER_LAYERS,
     LABEL_SET,
+    LABEL_SET_PARAPHRASED,
+    MAX_LABEL_CHARS,
     MODEL_ID,
     MODEL_REVISION,
     SAMPLE_SPLIT,
@@ -30,6 +32,7 @@ from bart_zero_shot_classification_pipeline import (
     label_names,
     load_byod_dataset,
     majority_baseline,
+    paired_changes,
     read_corpus,
     split_dataset,
     validate_dataset,
@@ -227,6 +230,67 @@ def test_classification_metrics_and_majority_baseline(forbid_model_imports):
         classification_metrics(["a"], ["a", "b"])
     majority = majority_baseline([{"label": g} for g in gold])
     assert majority["accuracy"] == 50.0 and "'a'" in majority["baseline"]
+
+
+def test_metrics_use_the_declared_vocabulary_and_flag_undefined_precision(forbid_model_imports):
+    gold = ["a", "a", "b", "b"]
+    result = classification_metrics(["a", "a", "a", "a"], gold, labels=["a", "b", "c"])
+    # every declared label counts in the macro average, including one with no gold support
+    assert result["n_labels"] == 3 and list(result["per_label"]) == ["a", "b", "c"]
+    assert result["per_label"]["b"]["precision_defined"] is False
+    assert result["per_label"]["b"]["precision"] == 0.0 and "undefined" in result["per_label"]["b"]["note"]
+    assert result["per_label"]["c"]["support"] == 0 and result["per_label"]["c"]["f1"] == 0.0
+    a_f1 = 100.0 * 2 * 2 / (2 * 2 + 2 + 0)
+    assert result["macro_f1"] == pytest.approx(a_f1 / 3)
+    assert result["confusion"]["labels"] == ["a", "b", "c"]
+    assert result["confusion"]["matrix"] == [[2, 0, 0], [2, 0, 0], [0, 0, 0]]
+    with pytest.raises(ValueError, match="outside the declared vocabulary"):
+        classification_metrics(["a"], ["z"], labels=["a"])
+
+
+def test_majority_baseline_is_fitted_on_training_labels_with_alphabetical_ties(forbid_model_imports):
+    train = [{"label": g} for g in ["b", "b", "a", "a", "c"]]
+    test = [{"label": g} for g in ["c", "c", "c", "a"]]
+    result = majority_baseline(test, train=train, labels=["a", "b", "c"])
+    # 'a' and 'b' tie on the training split; the alphabetically first wins, whatever the test labels say
+    assert "'a'" in result["baseline"] and result["fitted_on"] == "training labels"
+    assert result["accuracy"] == 25.0 and "2 labels share" in result["tie_rule"]
+
+
+def test_paired_changes_groups_every_item(forbid_model_imports):
+    ids = ["m1", "m2", "m3", "m4", "m5"]
+    gold = ["a", "a", "b", "b", "c"]
+    before = ["b", "a", "b", "a", "a"]
+    after = ["a", "b", "b", "a", "b"]
+    result = paired_changes(ids, gold, before, after)
+    assert result["ids"]["corrected"] == ["m1"] and result["ids"]["new_error"] == ["m2"]
+    assert result["ids"]["unchanged_correct"] == ["m3"] and result["ids"]["unchanged_incorrect"] == ["m4"]
+    assert result["ids"]["changed_incorrect_to_incorrect"] == ["m5"]
+    assert result["changed_predictions"] == 3 and result["changed_fraction"] == pytest.approx(0.6)
+    assert sum(result["counts"].values()) == 5
+    with pytest.raises(ValueError, match="same length"):
+        paired_changes(ids, gold, before, after[:-1])
+
+
+def test_paraphrased_description_set_keeps_ids_order_and_ceilings(forbid_model_imports):
+    assert list(LABEL_SET_PARAPHRASED) == list(LABEL_SET)
+    assert len(set(LABEL_SET_PARAPHRASED.values())) == len(LABEL_SET)
+    assert all(1 <= len(v) <= MAX_LABEL_CHARS for v in LABEL_SET_PARAPHRASED.values())
+    # each paraphrase actually rewords its category
+    assert all(LABEL_SET_PARAPHRASED[k] != LABEL_SET[k] for k in LABEL_SET)
+
+
+def test_evaluate_returns_per_record_predictions_over_the_full_vocabulary(forbid_model_imports):
+    records = [
+        {"id": "e1", "text": "please change my pin", "label": "changing the PIN"},
+        {"id": "e2", "text": "what is the exchange rate today", "label": "the exchange rate"},
+    ]
+    vocabulary = ["changing the PIN", "the exchange rate", "the age limit"]
+    result = _pipeline_without_model().evaluate(records, vocabulary)
+    assert [p["id"] for p in result["predictions"]] == ["e1", "e2"]
+    assert all(set(p["scores"]) == set(vocabulary) for p in result["predictions"])
+    assert result["n_labels"] == 3 and result["per_label"]["the age limit"]["support"] == 0
+    assert result["predictions"][1]["predicted"] == "the exchange rate"
 
 
 # --- BYOD loaders and CSV -----------------------------------------------------------------------------

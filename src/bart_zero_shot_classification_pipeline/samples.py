@@ -54,6 +54,22 @@ LABEL_SET: dict[str, str] = {
     "terminate_account": "closing the account",
     "top_up_failed": "a failed top-up",
 }
+# Description set B for the notebook's category-wording activity: one paraphrase per intent, written to keep
+# the category's meaning and scope (same stable intent id, same order) while changing its words. The main
+# evaluation always uses LABEL_SET (set A); set B is scored only by the pretrained model on the validation
+# split.
+LABEL_SET_PARAPHRASED: dict[str, str] = {
+    "card_arrival": "the delivery of a new card",
+    "lost_or_stolen_card": "a card that has gone missing or been stolen",
+    "exchange_rate": "the currency conversion rate",
+    "change_pin": "updating the card's PIN code",
+    "declined_card_payment": "a card payment that was refused",
+    "transfer_not_received_by_recipient": "money sent that the recipient has not received",
+    "atm_support": "help with using a cash machine",
+    "age_limit": "the minimum age requirement",
+    "terminate_account": "cancelling the account",
+    "top_up_failed": "a top-up that did not go through",
+}
 DEFAULT_HYPOTHESIS_TEMPLATE = "This customer message is about {}."
 SAMPLE_SEED = 42
 SAMPLE_SPLIT = {"train": 400, "validation": 100, "test": 200}  # balanced over the ten intents

@@ -3,7 +3,7 @@
 `tutorials/bart_zero_shot_classification_colab.ipynb` (`E2E`, **standalone** carrier) is a **release candidate**
 until the exact notebook revision has executed top-to-bottom in a clean supported runtime. Unit tests, JSON
 validation, code-cell compilation, the generator parity checks and `tools/validate_release_assets.py` are necessary
-checks but are **not** runtime evidence under DIMER Notebook Specification 2.0 (REL8). This file is the durable
+checks but are **not** runtime evidence under DIMER Notebook Specification 2.2 (REL8). This file is the durable
 release-gate record for the notebook.
 
 ## Automatic coverage (static, every pull request)
@@ -13,7 +13,7 @@ CI runs `tools/validate_release_assets.py`, which checks:
 - notebook JSON parses; every code cell compiles as plain Python (no `%`/`!` magics); no persisted outputs or
   execution counts; no unresolved placeholder markers; every code cell is preceded by an explanatory markdown cell;
 - exactly one tutorial notebook, named in `tutorials/README.md` with its `E2E` profile, the notebook-spec version
-  and the standalone carrier; `metadata.dimer` declares that profile, spec `2.0`, a §3.3 pedagogical mode,
+  and the standalone carrier; `metadata.dimer` declares that profile, spec `2.2`, a §3.3 pedagogical mode,
   `standalone: true` and `generated_from` (repository, revision, module SHA-256, generator);
 - the standalone carrier (ST1–ST8, PAR1–PAR4): no clone, repository install or repository import on the primary
   path; one cell per carried module (`pipeline.py`, `samples.py`, `metrics.py`), each equal to its source after the
@@ -29,11 +29,14 @@ CI runs `tools/validate_release_assets.py`, which checks:
   `BARTZeroShotClassificationPipeline.from_pretrained(weights_dir=...)`, `fetch_corpus` from the pinned cache path,
   `read_corpus` + `build_sample_dataset(seed=SPLIT_SEED)` / `load_byod_dataset`, `validate_dataset` per split,
   `label_names`, `check_split_disjoint`, `write_dataset_csv`, `validate_inputs` with the duplicate-label refusal
-  probe, `pipe.classify` with the sanity checks in both score modes, `majority_baseline`, `pipe.evaluate` on the
-  frozen model and on the validation and test splits after adaptation with the accuracy assertions, `pipe.adapt` with
-  its explicit hyperparameters and template, `evaluation_report` and `pipe.evaluate` on the unseen messages,
-  `pipe.save_artifact`, `BARTZeroShotClassificationPipeline.from_artifact` and the reload-parity assertion, and the
-  provenance fields `weight_format`, `weight_sha256` and the `corpus` block), the six expected `outputs/` paths, the
+  probe, the text-hypothesis pair with its three NLI logits, `pipe.classify` with the sanity checks in both score
+  modes, `majority_baseline` fitted on the training labels, `pipe.evaluate` on the pretrained model and on the
+  validation and test splits after adaptation with the confusion matrices, `paired_changes` between the pretrained and
+  adapted models, the category-wording activity (a freshly loaded pretrained pipeline, description sets A and B,
+  paired changes), `pipe.adapt` with its explicit hyperparameters and template, `evaluation_report` and `pipe.evaluate`
+  on the unseen messages, `pipe.save_artifact` with the classification setup,
+  `BARTZeroShotClassificationPipeline.from_artifact` and the full-test reload-parity assertion, and the
+  provenance fields `weight_format`, `weight_sha256` and the `corpus` block), the seven expected `outputs/` paths, the
   learner-facing statements (an entailment-derived softmax is not a calibrated probability, the argmax rule,
   adaptation with gold labels, the entailment and contradiction pairs, the majority baseline, macro-F1, no dispersion
   estimate, pairs above the token ceiling rejected not truncated, named exclusions, the CC BY 4.0 corpus licence)
@@ -77,10 +80,14 @@ Before changing the registry status from `Candidate` to `Release-grade`:
 4. verify that Section 1 reports `NOTEBOOK_SOURCE.repository_revision` equal to the revision recorded in
    `metadata.dimer.generated_from` and that the installed core package versions equal the inline `PINS`
    (= `pyproject.toml`): `torch==2.14.0`, `transformers==4.57.6`, `tokenizers==0.22.2`, `huggingface-hub==0.36.2`,
-   `safetensors==0.8.0`, `numpy==2.5.3` (an interpreter restart after the install is expected where the runtime's
-   preinstalled torch or numpy differ from the pins);
+   `safetensors==0.8.0`, `numpy==2.5.3`. Since 2026-09-27 Section 1 installs the pins into a separate `uv`
+   environment (`dimer_isolated_env/`, created from the kernel's own Python) and routes every later code cell to
+   one persistent Python process in it, so no restart is expected: the kernel's pre-imported packages (Colab
+   imports NumPy and `cuda-bindings` before the first cell) are never replaced. Confirm the router cell prints
+   `Every later code cell now runs in …dimer_isolated_env/bin/python` and the runtime record reports the pinned
+   versions;
 5. verify every default-path stage completes:
-   - pinned runtime installed from the inline `PINS` with no GitHub access;
+   - pinned runtime installed from the inline `PINS` into the isolated environment with no GitHub access;
    - the three carried module cells execute (defining `BARTZeroShotClassificationPipeline`, `verify_snapshot`,
      `stage_missing_files`, `validate_inputs`, `evaluation_report`, `accuracy`, `fetch_corpus`, `read_corpus`,
      `filter_records`, `build_sample_dataset`, `validate_dataset`, `label_names`, `check_split_disjoint`,
@@ -99,23 +106,38 @@ Before changing the registry status from `Candidate` to `Release-grade`:
      and both decision rules surfaced; `validate_inputs` writing `outputs/…_input_manifest.json` (verdict `accepted`,
      one recorded rejection finding from the duplicate-label probe); `pipe.classify` on the three synthetic sentences
      with every sanity check `True` in both score modes (the card-pass smoke gave `travel` 0.9939 on the first);
-   - Section 6: the majority baseline (accuracy 10.0, macro-F1 1.82 on the balanced split) and the frozen zero-shot
-     model's test score (accuracy ≈ 82.50, macro-F1 ≈ 81.39 on CPU float32; `ATM support` and `card arrival`
-     the weakest phrases), with the cell's assertion that the frozen accuracy beats the baseline;
-   - Section 7: `pipe.adapt` printing epoch 0 as the frozen model, 34,646,019 trainable of 407,344,131 parameters,
-     2 pairs per record, and a two-epoch history with validation accuracy rising (≈ 84.00 → 96.00 → 98.00 in the
-     recorded run; `best_epoch` 2);
-   - Section 8: `pipe.evaluate` on the validation and test splits with the three-way comparison and per-label F1 and
-     `outputs/…_evaluation_report.json` written (the cell asserts the adapted test accuracy exceeds the frozen one —
-     on the sample ≈ 97.00 versus ≈ 82.50, macro-F1 ≈ 96.99 versus ≈ 81.39);
-   - Section 9: ten unseen training-file messages (one per intent) classified with `evaluation_report` returning
+   - Section 5 also shows one training message against two hypotheses with entailment, neutral and contradiction
+     logits, and its ranked single-label scores over the ten descriptions;
+   - Section 6: the majority baseline **fitted on the training labels** (all ten tie at 40; the alphabetically first,
+     `ATM support`, is used; accuracy 10.0, macro-F1 1.82) and the pretrained zero-shot model's test score (accuracy
+     ≈ 82.50, macro-F1 ≈ 81.39 on CPU float32; `ATM support` and `card arrival` the weakest descriptions), the
+     per-class table with support and undefined-precision notes, the longest scored pair (60 tokens on the sample)
+     and the confusion matrix; the comparison with the baseline is printed, not asserted;
+   - Section 7: `pipe.adapt` printing epoch 0 as the pretrained model, 34,646,019 trainable of 407,344,131
+     parameters, 2 pairs per record, and a two-epoch history (validation accuracy ≈ 84.00 → 96.00 → 98.00 in the
+     recorded runs; `best_epoch` 2);
+   - Section 8: the three-way comparison on the same 200 test messages with per-class F1 for all three systems, the
+     adapted confusion matrix and the list of categories whose F1 fell (none in the recorded runs), and
+     `outputs/…_evaluation_report.json` written; the improvement is printed, not asserted, so a negative result is
+     recorded rather than stopping the run;
+   - Section 9: paired changes between the pretrained and adapted models (30 corrected, 1 new error, 164 unchanged
+     correct, 3 unchanged incorrect, 2 changed incorrect in the recorded runs) with up to three examples per group in
+     test-split order;
+   - Section 10: the category-wording activity on a freshly loaded, verified pretrained pipeline over the 100
+     validation messages — description sets A and B side by side, accuracy / macro-F1 per set (84.0 / 82.61 and
+     82.0 / 82.38 in the recorded runs), 17 changed predictions (7 correct→incorrect, 5 incorrect→correct, 5 to a
+     different wrong category) — and `outputs/…_description_activity.json` naming the description sets and the
+     checkpoint;
+   - Section 11: ten unseen training-file messages (one per intent) classified with `evaluation_report` returning
      `sample-sanity` and `pipe.evaluate` returning `measured-small-sample`, `outputs/…_predictions.csv` written;
      `pipe.save_artifact` writing `outputs/…_adapter/{adapter.safetensors,manifest.json}` (56 tensors, about 139 MB)
-     and `BARTZeroShotClassificationPipeline.from_artifact` reloading it with 8/8 identical top labels (the cell
-     asserts it); `outputs/…_result.json` written with `NOTEBOOK_SOURCE`, the model identity and licence, the
-     snapshot block (`weight_format`, `weight_sha256`), the `corpus` block with the label set, the inference-contract
-     items, the labels and template, the comparison, the artifact digest, the reload parity, the runtime versions and
-     device;
+     with the category IDs, descriptions, template and scoring configuration in its metadata, and
+     `BARTZeroShotClassificationPipeline.from_artifact` rescoring all 200 test messages with identical predictions,
+     score differences within 1e-5 and identical metrics (the cell asserts it; this is a new pipeline object built
+     from the saved files in the same kernel process); `outputs/…_result.json` written with `NOTEBOOK_SOURCE`, the
+     model identity and licence, the snapshot block (`weight_format`, `weight_sha256`), the `corpus` block with the
+     label set, the inference-contract items, the classification setup, the comparison, the paired changes, the
+     wording-activity summary, the artifact digest, the reload parity, the runtime versions and device;
 6. verify the exports exist and the interpretation section matches the observed path;
 7. record the notebook Git blob id, commit, runtime (platform, Python, PyTorch, Transformers, device), the model
    identifier and immutable revision, whether the model cache, the weights directory and the corpus cache were clean,
@@ -142,10 +164,14 @@ stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
+| 2026-09-27 | `6141d4f` / blob `f652fd671322` (the executed file's 33 cells equal this blob; uploaded file sha256 `6676ec05ba40…`) | Google Colab, **T4** runtime; kernel Python 3.13.15; isolated environment `/content/dimer_isolated_env` (`torch 2.14.0+cu130`, `transformers 4.57.6`, `cuda:0`) | Default sample path, `Run all` with no restart: pins installed into the isolated environment, every later cell routed to its worker; snapshot staged from the Hub and verified (7 files); Banking77 fetched; refusal probes; inference contract; baseline and pretrained model; two-epoch adaptation; comparison; paired changes; wording activity; export and reload | — (pretrained test 13.9 s, adaptation 48.1 s) | **PASSED** — 15/15 code cells, execution counts 1–15, no errors. Test accuracy / macro-F1: majority (fitted on training labels) 10.0 / 1.82, pretrained 82.5 / 81.39, adapted 96.0 / 95.96 (best epoch 2; no category's F1 fell). The adapted figure differs from the CPU pre-flights (97.0 / 96.99) and equals the 2026-09-19 Kaggle T4 run, consistent with GPU non-determinism in training. Paired changes: 28 corrected, 1 new error, 164 unchanged correct, 2 unchanged incorrect, 5 changed incorrect. Wording activity (pretrained, validation): set A 84.0 / 82.61, set B 82.0 / 82.38; 17 changed (7 correct→incorrect, 5 incorrect→correct, 5 to another wrong category). Reload parity 200/200, max score difference 0.0, identical metrics |
+| 2026-09-27 | This branch (isolated runtime; file sha256 `77a3a4b9359a…`, blob `f652fd671322`) | Local pre-flight in a real Jupyter kernel (Linux container, CPU; `nbclient` + `ipykernel` on managed CPython 3.12.12 with **NumPy 2.1.3 imported by an IPython startup file before the first cell**, as Colab does; `DIMER_NOTEBOOK_CI_PREINSTALLED` unset; no `uv` on PATH, so the notebook installed `uv==0.8.17` with pip; the worker's pins resolved from the PyTorch CPU index, `torch 2.14.0+cpu`; fresh working directory) | Default sample path, `Run all`: install cell created `dimer_isolated_env/` from the kernel's Python and installed the pins; router cell started the worker; all 13 routed cells ran in it with the kernel's NumPy untouched | 769 s | PASS — pre-flight only, **not** promotion evidence. 15/15 code cells, execution counts 1–15, no errors; runtime record `torch 2.14.0+cpu`, `transformers 4.57.6`, Python 3.12.12. Figures identical to the previous pre-flight: test accuracy / macro-F1 majority 10.0 / 1.82, pretrained 82.5 / 81.39, adapted 97.0 / 96.99; paired changes 30 corrected, 1 new error; wording activity A 84.0 / 82.61, B 82.0 / 82.38, 17 changed; reload parity 200/200, max score difference 0.0 |
+| 2026-09-27 | `4864c5a` / blob `1ab5e1f6a8ba` (the executed file's 29 cells equal this blob) | Google Colab, **T4** runtime | Default `Run all` | — | **FAILED** in Section 1 (execution count 1; no later cell ran): `RuntimeError: Core dependencies changed while older modules were loaded: cuda-bindings: loaded=12.9.7, installed=13.4.3; numpy: loaded=2.1.3, installed=2.5.3`. Colab imports these before the first cell, so the in-kernel pinned install could not take effect without a restart, which DIMER Notebook Specification 2.2 §5 does not allow. Fixed by the isolated runtime (row above) |
+| 2026-09-27 | `3fc7850` / `1ab5e1f6a8ba` (guided upgrade; file sha256 `89668a2c617d…`) | Local pre-flight harness (Linux container, CPython 3.12.12, CPU float32, `torch 2.14.0+cpu` from the PyTorch CPU index (the pinned version; not the `+cu130` wheel), `transformers 4.57.6`; pins pre-installed with `DIMER_NOTEBOOK_CI_PREINSTALLED=1`; fresh working directory with no pre-staged snapshot or corpus cache; every code cell executed in order in one fresh interpreter) | Default sample path, all 13 code cells: snapshot staged from the Hub and verified; Banking77 fetched and verified (400 / 100 / 200, digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…`); four refusal probes each rejected by its own check; text-hypothesis pair; inference contract; baseline and pretrained model; two-epoch adaptation; three-way comparison; paired changes; wording activity; export and reload | 784 s (pretrained test 89 s, adaptation 320 s, comparison 165 s, wording activity 96 s, export and reload 97 s) | PASS — pre-flight only, **not** promotion evidence. Test accuracy / macro-F1: majority (fitted on training labels) 10.0 / 1.82, pretrained 82.5 / 81.39, adapted 97.0 / 96.99 (best epoch 2; validation 84 → 96 → 98); no category's F1 fell. Paired changes: 30 corrected, 1 new error, 164 unchanged correct, 3 unchanged incorrect, 2 changed incorrect. Wording activity (pretrained, validation): set A 84.0 / 82.61, set B 82.0 / 82.38; 17 of 100 predictions changed (7 correct→incorrect, 5 incorrect→correct, 5 to another wrong category). Reload parity 200/200 identical, max score difference 0.0, identical metrics; adapter 138,590,612 bytes, 56 tensors, 10 categories recorded in its metadata. The model-backed unit tests (`tests/test_model_backed.py`) passed 5/5 against the snapshot this run staged. An earlier run of the preceding revision (file sha256 `f48bd1707d6c…`) gave the same figures and exposed the refusal-probe defect fixed in this blob |
 | 2026-09-19 | `5ecf2f2` / `f85282d2` | Kaggle Tesla T4 (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v2; image `torch 2.10.0+cu128` / `transformers 5.0.0` before the pinned install, `torch 2.14.0+cu130` / `transformers 4.57.6` after, Python 3.12.13, `cuda:0`) | Default sample path, `Run all` from a fresh interpreter with an empty Hugging Face cache and no repository checkout (blob SHA-1 verified against GitHub before execution) | 325.3 s | **PASSED** — 11/11 code cells ok (1 restart after install cell); 18 files, 1633 MB staged from the Hub into a clean cache; comparison {accuracy: {majority: 10, frozen: 82.5, adapted: 96}, macro_f1: {majority: 1.82, frozen: 81.39, adapted: 95.96}, delta_vs_frozen: {accuracy: 13.5, macro_f1: 14.57}, per_label_f1: {ATM support: {frozen: 33.3, adapted: 95.2}, a declined card payment: {frozen: 86.4, adapted: 97.6}, a failed top-up: {frozen: 88.9, adapted: 95}, a lost or stolen card: {frozen: 85, adapted: 90}, a transfer not received by the recipient: {frozen: 73.1, adapted: 94.7}, card arrival: {frozen: 58.3, adapted: 89.5}, changing the PIN: {frozen: 100, adapted: 100}, closing the account: {frozen: 100, adapted: 100}, the age limit: {frozen: 88.9, adapted: 97.6}, the exchange rate: {frozen: 100, adapted: 100}}}; reload parity {identical_labels: 8, of: 8}; run summary and executed notebook archived under `.agent/backups/kaggle-e2e-2026-09-19/out/dimer-nb2-bart-zero-shot-classification/v2/evidence/` in the workspace |
 | 2026-09-19 | `2559a76` / `9c599285` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | Default sample path (install skipped, pins pre-installed → three carried modules → inline manifest assert → `stage_missing_files` fetched 0 of 7 entries because the snapshot was pre-staged → `verify_snapshot` 7 files → `from_pretrained` on CPU → `fetch_corpus` served from the pre-staged cache after its digest checks → 10,003 + 3,080 rows read, 400 / 100 / 200 balanced records drawn with `check_split_disjoint` clean and digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…` → four dataset refusals → input manifest + duplicate-label refusal probe → three synthetic sentences classified in both score modes with every sanity check `True` → majority baseline → frozen evaluation → `adapt` → validation + test evaluation → ten unseen messages → adapter export → reload parity) | 342.1 s | **PASSED** — 11/11 code cells; majority accuracy 10.0 / macro-F1 1.82; frozen zero-shot test 82.5 / 81.39 (54.2 s; per-label F1 from 33.3 on `ATM support` to 100 on three phrases); `adapt` 34,646,019 of 407,344,131 params, 800 pairs from 400 messages, 2 epochs, 192.6 s, validation accuracy 84.0 → 96.0 → 98.0 (`best_epoch` 2, train loss 0.289 → 0.167); **adapted test accuracy 97.0 / macro-F1 96.99 (Δ +14.5 / +15.6; every per-label F1 ≥ 92.3)**; ten unseen messages `sample-sanity` accuracy 0.8, `measured-small-sample`; adapter 138,590,612 B / 56 tensors, SHA-256 `30e53f03…`; reload parity 8/8; six exports written. Pre-flight; hosted clean-runtime run still required |
 | 2026-09-14 | `34098a7` / `f8a761ce5419` (`TASK-INFERENCE`, superseded) | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | Default sample path of the inference-only notebook: three synthetic sentences, `stage_missing_files` fetching `model.safetensors` from the Hub, `verify_snapshot`, `classify` in both modes, `sample-sanity` report | 280.7 s | **PASSED** — 8/8 code cells (1 restart after the install cell), 4 outputs verified, 1632 MB staged; does not cover the `E2E` blob |
 
 ## Current status
 
-**Release-grade.** The `E2E` notebook blob `f85282d2` (committed at `5ecf2f2`) executed top-to-bottom in a clean Kaggle Tesla T4 runtime on 2026-09-19 (11/11 ok (1 restart after install cell), 325.3 s, 18 files, 1633 MB fetched from the Hub and digest-verified inside the notebook) with no repository checkout — the REL1/REL10 supported-runtime evidence this file gates on. The local pre-flight rows above are what preceded it and remain history. Any later change to the carried modules or to the notebook produces a new blob, and the registry returns to **Candidate** until a clean run of that blob is recorded here.
+**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The notebook stays Candidate pending maintainer review of that evidence, review of the paraphrased description set B, and an exercised BYOD path. The local pre-flights of the revised notebook are recorded below it.

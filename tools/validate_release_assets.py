@@ -1,6 +1,6 @@
 """Static release-asset validation for the BART-large MNLI zero-shot classification DIMER pipeline.
 
-Checks the STANDALONE tutorial notebook (DIMER Notebook Specification 2.0 §4), the tutorial
+Checks the STANDALONE tutorial notebook (DIMER Notebook Specification 2.2 §4), the tutorial
 registry, model card, README, STATUS.md and weight documentation for source conformance and
 cross-document identity consistency, and runs the generator parity checks (PAR1–PAR3).
 
@@ -34,6 +34,7 @@ EXPECTED_OUTPUTS = (
     "outputs/bart_zero_shot_classification_input_manifest.json",
     "outputs/bart_zero_shot_classification_evaluation_report.json",
     "outputs/bart_zero_shot_classification_predictions.csv",
+    "outputs/bart_zero_shot_classification_description_activity.json",
     "outputs/bart_zero_shot_classification_adapter",
     "outputs/bart_zero_shot_classification_result.json",
 )
@@ -47,6 +48,9 @@ CODE_MARKERS = (
     "labels = label_names(train_records)",
     "disjoint = check_split_disjoint(splits)",
     "write_dataset_csv(train_records, 'outputs/bart_zero_shot_classification_train.csv')",
+    # the out-of-label-set probe must reach the label check (labels is keyword-only; a positional call raises a
+    # TypeError about the signature instead, which the previous notebook reported as a rejection)
+    "validate_dataset(probe[0], labels=probe[1])",
     # Stage 5: the inference contract with its manifest, rejection probe and sanity checks
     "input_manifest = validate_inputs(texts, demo_labels, multi_label=MULTI_LABEL, names=text_ids)",
     "validate_inputs(texts, [*demo_labels, demo_labels[0]], multi_label=MULTI_LABEL)",
@@ -55,10 +59,13 @@ CODE_MARKERS = (
     "'single_label_scores_sum_to_one': MULTI_LABEL or abs(sum(scores) - 1.0) < 1e-6",
     "'top_label_is_first': result['top_label'] == result['labels'][0]['label']",
     "'n_tokens_within_ceiling': 1 <= result['n_tokens'] <= MAX_TEXT_TOKENS",
-    # Stage 6: majority baseline and the frozen zero-shot model on the test split
-    "baseline_majority = majority_baseline(test_records)",
+    # Stage 5: one text-hypothesis pair with its three NLI logits
+    "pair_view = pipe.classify(example['text'], [example['label'], other], multi_label=True, hypothesis_template=TEMPLATE)",
+    "entry['neutral_logit']",
+    # Stage 6: training-fitted majority baseline and the pretrained model on the test split
+    "baseline_majority = majority_baseline(test_records, train=train_records, labels=labels)",
     "frozen_test = pipe.evaluate(test_records, labels, hypothesis_template=TEMPLATE)",
-    "assert frozen_test['accuracy'] > baseline_majority['accuracy']",
+    "confusion_markdown(frozen_test,",
     # Stage 7: bounded fine-tuning with explicit hyperparameters
     "adapt_result = pipe.adapt(",
     "trainable_decoder_layers=TRAINABLE_DECODER_LAYERS",
@@ -68,13 +75,22 @@ CODE_MARKERS = (
     "adapted_test = pipe.evaluate(test_records, labels, hypothesis_template=TEMPLATE)",
     "adapted_val = pipe.evaluate(val_records, labels, hypothesis_template=TEMPLATE)",
     "'delta_vs_frozen'",
-    "assert adapted_test['accuracy'] > frozen_test['accuracy']",
+    "confusion_markdown(adapted_test,",
+    # Stage 9: paired changes between the pretrained and adapted models on the same test messages
+    "adaptation_changes = paired_changes(test_ids,",
+    # Stage 10: the category-wording activity on the pretrained checkpoint (only the descriptions change)
+    "base_pipe = BARTZeroShotClassificationPipeline.from_pretrained(weights_dir=WEIGHTS_DIR)",
+    "DESCRIPTION_SETS = {'A': dict(LABEL_SET), 'B': dict(LABEL_SET_PARAPHRASED)}",
+    "records_for_set = [{**r, 'label': descriptions[r['intent']]} for r in val_records]",
+    "wording_changes = paired_changes(activity_ids, gold_ids, predicted_ids['A'], predicted_ids['B'])",
     # Stage 9: new messages, batch report, artifact, reload parity, provenance
     "new_report = evaluation_report(new_results, [r['label'] for r in new_records]",
     "new_metrics = pipe.evaluate(new_records, labels, hypothesis_template=TEMPLATE)",
     "pipe.save_artifact(artifact_dir, metadata=",
     "reloaded = BARTZeroShotClassificationPipeline.from_artifact(artifact_dir, weights_dir=WEIGHTS_DIR, device=pipe.device)",
-    "assert parity['identical_labels'] == parity['of']",
+    "reloaded_test = reloaded.evaluate(test_records, labels, hypothesis_template=TEMPLATE)",
+    "assert parity['identical_labels'] == parity['of'] and score_delta <= parity['score_tolerance'] and parity['metrics_identical']",
+    "'classification_setup': classification_setup",
     "weight_entry = next(entry for entry in snapshot['files'] if entry['path'] == WEIGHT_FILE)",
     "'weight_format': 'safetensors, digest-verified'",
     "'corpus': {'name': CORPUS_NAME, 'release': CORPUS_RELEASE, 'base_url': CORPUS_BASE_URL",
@@ -89,12 +105,24 @@ MARKDOWN_MARKERS = (
     "and bounded supervised fine-tuning of the last decoder blocks and the NLI head",
     "**The score is an entailment-derived softmax, not a calibrated probability**",
     "**default decision rule is `argmax`**",
-    "**adaptation with gold labels**",
-    "**entailment pair**",
-    "**contradiction pair**",
+    "**Zero-shot does not mean untrained.**",
+    "**The category descriptions are part of the model input**",
+    "**task-adapted results are no longer zero-shot for that task**",
+    "**A single-label classifier always picks one of the supplied categories: it does not recognise that none of them applies.**",
+    "**entailment**",
+    "**neutral**",
+    "**contradiction**",
     "**majority-class baseline**",
     "**macro-F1**",
-    "no dispersion estimate",
+    "**undefined precision**",
+    "**Example-selection rule:**",
+    "**Question: how sensitive are predictions to equivalent descriptions of the same categories?**",
+    "**Only the wording changes.**",
+    "**Reload parity verifies that the saved behaviour is reproduced, not that the behaviour is good**",
+    "**Conclude with evidence.**",
+    "**AI Assistance Disclosure:**",
+    "optional personal notes and are not required submissions",
+    "**no dispersion estimate**",
     "**rejects with a `ValueError` naming the count, never truncates**",
     "a trained classification head over a fixed label vocabulary",
     "CC BY 4.0 (attribution: PolyAI; Casanueva et al., 2020)",
@@ -122,10 +150,10 @@ FORBIDDEN_OUTSIDE_MODULE = (
 # ---------------------------------------------------------------------------
 # Shared checks. Everything below is source/structure validation only. Passing
 # these checks is NOT clean-runtime execution evidence under DIMER Notebook
-# Specification 2.0; see docs/release-verification.md for the release gate.
+# Specification 2.2; see docs/release-verification.md for the release gate.
 # ---------------------------------------------------------------------------
 
-NOTEBOOK_SPEC = "2.0"
+NOTEBOOK_SPEC = "2.2"
 ALLOWED_PROFILES = {"E2E", "ARTIFACT-INFERENCE", "TASK-INFERENCE", "MULTI-CAPABILITY", "SMOKE"}
 STATUS_TOKENS = ("Candidate", "Release-grade")
 PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b|Insert text here|Tooltip:", re.I)

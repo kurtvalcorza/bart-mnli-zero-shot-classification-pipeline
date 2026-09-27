@@ -127,3 +127,24 @@ def test_st1_primary_path_has_no_repository_dependency(notebook: dict) -> None:
     assert f"from {TEMPLATE['package']}" not in code
     # own-repository clone/install (ST1); SHA-pinned upstream git dependencies are allowed
     assert "github.com/kurtvalcorza" not in code
+
+
+def test_isolated_runtime_routes_every_later_cell(notebook: dict) -> None:
+    """Colab pre-imports numpy (and cuda-bindings), so an in-kernel pinned install trips the stale-import guard.
+    The pins go into a separate uv environment instead; only the install and router cells run in the kernel."""
+    if not TEMPLATE.get("isolated_runtime"):
+        pytest.skip("template does not use the isolated runtime")
+    code = [_source(c) for c in _cells(notebook, "code")]
+    kernel = [i for i, src in enumerate(code) if "# dimer: kernel cell" in src]
+    assert kernel == [0, 1], f"only the first two code cells may run in the kernel, got {kernel}"
+    install, router = code[0], code[1]
+    assert 'uv, "venv", "--quiet", "--python", sys.executable' in install
+    assert "_ip.input_transformers_cleanup.append(_route_to_isolated_runtime)" in router
+    assert 'MPLBACKEND="Agg"' in router and 'DIMER_NOTEBOOK_CI_PREINSTALLED="1"' in router
+
+    def pins(src: str) -> list[str]:
+        block = re.search(r"PINS = \[\n(.*?)\n\]", src, re.S)
+        assert block, "PINS list not found"
+        return re.findall(r"'([^']+)'", block.group(1))
+
+    assert pins(install) == pins(code[2]), "the isolated environment must install the same pins the runtime records"
