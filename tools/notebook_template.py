@@ -27,6 +27,7 @@ TEMPLATE = {
     "profile": "E2E",
     "mode": "GUIDED",
     "infrastructure_labels": True,
+    "isolated_runtime": True,
     "run_all": (
         "Selecting **Run all** in a fresh supported runtime installs the pinned dependencies, stages and digest-verifies the "
         "pinned BART-large MNLI snapshot (safetensors, 1.6 GB), fetches the two digest-pinned Banking77 CSV files (1.1 MB, "
