@@ -44,7 +44,17 @@ CODE_MARKERS = (
     "corpus = read_corpus(fetch_corpus(cache_dir='weights/banking77'))",
     "splits = build_sample_dataset(corpus, seed=SPLIT_SEED)",
     "records = load_byod_dataset(byod_path)",
-    "dataset_manifests = {name: validate_dataset(part) for name, part in splits.items()}",
+    "dataset_manifests = {name: validate_dataset(part, min_records=MIN_RECORDS if name == 'train' else 1) for name, part in splits.items()}",
+    # ZSC-M2: BYOD token budget and the upload/path guards, before any model call
+    "token_budget = check_byod_tokens(splits, pair_tokens, max_tokens=MAX_TEXT_TOKENS, train_max_tokens=MAX_TRAIN_PAIR_TOKENS)",
+    "counts = pipe.count_pair_tokens(text, labels, hypothesis_template=TEMPLATE)",
+    "if len(uploaded) != 1:",
+    "BYOD_PATH = ''",
+    # ZSC-M1: Sections 6 and 7 start from the pretrained model; Section 6 refuses an adapted model
+    "def reset_to_pretrained():",
+    "if frozen_test['adapted']:",
+    # ZSC-m5: the learner-chosen wording change (set C)
+    "DESCRIPTION_SETS['C'] = {**DESCRIPTION_SETS['A'], mine_id: mine}",
     "labels = label_names(train_records)",
     "disjoint = check_split_disjoint(splits)",
     "write_dataset_csv(train_records, 'outputs/bart_zero_shot_classification_train.csv')",
@@ -89,7 +99,7 @@ CODE_MARKERS = (
     "pipe.save_artifact(artifact_dir, metadata=",
     "reloaded = BARTZeroShotClassificationPipeline.from_artifact(artifact_dir, weights_dir=WEIGHTS_DIR, device=pipe.device)",
     "reloaded_test = reloaded.evaluate(test_records, labels, hypothesis_template=TEMPLATE)",
-    "assert parity['identical_labels'] == parity['of'] and score_delta <= parity['score_tolerance'] and parity['metrics_identical']",
+    "if not (parity['identical_labels'] == parity['of'] and score_delta <= parity['score_tolerance'] and parity['metrics_identical']):",
     "'classification_setup': classification_setup",
     "weight_entry = next(entry for entry in snapshot['files'] if entry['path'] == WEIGHT_FILE)",
     "'weight_format': 'safetensors, digest-verified'",
@@ -126,6 +136,26 @@ MARKDOWN_MARKERS = (
     "**rejects with a `ValueError` naming the count, never truncates**",
     "a trained classification head over a fixed label vocabulary",
     "CC BY 4.0 (attribution: PolyAI; Casanueva et al., 2020)",
+    # review fixes (ZSC-M1, ZSC-m1, ZSC-m3, ZSC-m5)
+    "**Re-runs start from the pretrained model.**",
+    "**Adaptation always starts from the pretrained model.**",
+    "**Linux x86_64 runtimes only**",
+    "already scored in Section 8 — not unseen messages",
+    "Check your reasoning",
+    "## Troubleshooting",
+    "## Glossary",
+    "Predict → Change → Run → Observe → Explain",
+)
+# Learner-facing text the review fixes removed; it must not come back (ZSC-m2 stale install text, ZSC-M2 wrong
+# BYOD minimum, ZSC-m4 runtime figures without an environment, ZSC-M1 a bare parity assert).
+STALE_MARKDOWN = (
+    "installed directly — there is no repository clone",
+    "the cell stops with a restart instruction",
+    "a dataset needs 8..20,000 records",
+    "on CPU the model stages take roughly ten minutes",
+    "one training epoch over 800 NLI pairs about a minute",
+    "re-run from that cell",
+    "created with `uv` from the kernel's own",
 )
 # Direct-library use that must stay inside the carried module cell (G2: the notebook calls the
 # pipeline API, it does not reimplement it). Checked on every code cell except the embedded one.
@@ -646,7 +676,19 @@ def _validate_notebook_content(
     _check(not missing, f"{path.name}: missing required source markers: {missing}")
     present = [label for label, pattern in FORBIDDEN_PATTERNS if pattern.search(code)]
     _check(not present, f"{path.name}: forbidden/insecure source: {present}")
-    leaked = [marker for marker in FORBIDDEN_OUTSIDE_MODULE if marker in outside]
+    # The kernel install cell downloads the pinned uv wheel and verifies its size and SHA-256 (ZSC-m1); it is the only
+    # cell outside the carried modules allowed to use urllib.request.
+    kernel = {index for index, source, _tree in code_cells if "# dimer: kernel cell" in source}
+    learner = "\n".join(text for index, text in stripped.items() if index not in embedded and index not in kernel)
+    kernel_raw = [source for index, source, _tree in code_cells if index in kernel]
+    leaked = [marker for marker in FORBIDDEN_OUTSIDE_MODULE if marker in learner]
+    leaked += [m for m in FORBIDDEN_OUTSIDE_MODULE if m != "urllib.request" and any(m in _strip_comments(k) for k in kernel_raw)]
+    install = next((k for k in kernel_raw if "LOCK_TEXT = r" in k), "")
+    for needed in ("'--managed-python'", "'--require-hashes'", "'--only-binary'", "':all:'", "UV_SHA256", "LOCK_SHA256", "platform.machine() != 'x86_64'"):
+        _check(needed.replace("'", '"') in install, f"{path.name}: the isolated install cell must use {needed} (ZSC-m1)")
+    stale = [marker for marker in STALE_MARKDOWN if marker in markdown]
+    _check(not stale, f"{path.name}: stale learner-facing text: {stale}")
+    _check("\nassert " not in "\n" + learner, f"{path.name}: learner cells must not use a bare assert (ZSC-M1)")
     _check(not leaked, f"{path.name}: direct library use outside the carried module cell (G2): {leaked}")
     _check(
         f"pipe = {MODEL_LOAD_EXPR}" in outside,

@@ -76,6 +76,8 @@ SAMPLE_SPLIT = {"train": 400, "validation": 100, "test": 200}  # balanced over t
 MIN_RECORDS = 8
 MAX_RECORDS = 20_000
 MIN_LABEL_KINDS = 2
+# BYOD: the least that reaches training, validation and test at the default split fractions
+MIN_RECORDS_PER_LABEL = 4
 _ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")
 
 
@@ -320,10 +322,14 @@ def split_dataset(
     test_fraction: float = 0.2,
     seed: int = 0,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Seeded stratified split of a BYOD dataset into train/validation/test after de-duplicating texts."""
+    """Seeded stratified split of a BYOD dataset into train/validation/test after de-duplicating texts.
+
+    Every label must keep at least MIN_RECORDS_PER_LABEL distinct texts, so it reaches the training split
+    (and, at the default fractions, the validation and test splits too), and the training split must hold
+    at least MIN_RECORDS records. A refusal names the label or the split and the real minimum."""
     if not (0.0 <= val_fraction < 1.0 and 0.0 < test_fraction < 1.0 and val_fraction + test_fraction < 1.0):
         raise ValueError("fractions must satisfy 0 <= val < 1, 0 < test < 1, val + test < 1")
-    checked = validate_dataset(records)["records"]
+    checked = validate_dataset(records, min_records=1)["records"]
     seen: set[str] = set()
     by_label: dict[str, list[dict[str, Any]]] = {}
     for record in checked:
@@ -331,6 +337,18 @@ def split_dataset(
         if key not in seen:
             seen.add(key)
             by_label.setdefault(record["label"], []).append(record)
+    if len(by_label) < MIN_LABEL_KINDS:
+        raise ValueError(
+            f"the dataset has {len(by_label)} distinct label(s); at least {MIN_LABEL_KINDS} are required"
+        )
+    short = {
+        label: len(group) for label, group in sorted(by_label.items()) if len(group) < MIN_RECORDS_PER_LABEL
+    }
+    if short:
+        raise ValueError(
+            f"label(s) with fewer than {MIN_RECORDS_PER_LABEL} distinct texts after de-duplication cannot "
+            f"reach the training, validation and test splits: {short}; add records for them or remove them"
+        )
     rng = random.Random(seed)
     splits: dict[str, list[dict[str, Any]]] = {"test": [], "validation": [], "train": []}
     for label in sorted(by_label):
@@ -345,9 +363,58 @@ def split_dataset(
         rng.shuffle(part)
     if len(splits["train"]) < MIN_RECORDS:
         raise ValueError(
-            f"split leaves {len(splits['train'])} training records; at least {MIN_RECORDS} are required"
+            f"the training split has {len(splits['train'])} records; at least {MIN_RECORDS} are required "
+            f"(it keeps about {round(100 * (1 - val_fraction - test_fraction))} % of each label's distinct "
+            f"texts, so two balanced labels need at least "
+            f"{byod_minimum_records(2, val_fraction, test_fraction)} records); add records"
         )
     return splits
+
+
+def byod_minimum_records(n_labels: int, val_fraction: float = 0.15, test_fraction: float = 0.2) -> int:
+    """Smallest balanced dataset (records per label x `n_labels`) that `split_dataset` accepts."""
+    for per_label in range(MIN_RECORDS_PER_LABEL, MAX_RECORDS + 1):
+        n_test = max(1, round(per_label * test_fraction))
+        n_val = round(per_label * val_fraction)
+        if (per_label - n_test - n_val) * n_labels >= MIN_RECORDS:
+            return per_label * n_labels
+    raise ValueError("no balanced dataset within MAX_RECORDS satisfies the split")
+
+
+def check_byod_tokens(
+    splits: Mapping[str, Sequence[Mapping[str, Any]]],
+    count_tokens: Any,
+    *,
+    max_tokens: int,
+    train_max_tokens: int,
+) -> dict[str, Any]:
+    """Token budget of a BYOD dataset, checked before any model call.
+
+    `count_tokens(text, label)` returns `(longest pair over the label set, pair with `label`)` in BPE tokens.
+    A record whose longest pair exceeds `max_tokens` is refused, naming its split and id (inference never
+    truncates). Training pairs with the reference description longer than `train_max_tokens` are counted: they
+    are cut during training only."""
+    over: list[str] = []
+    truncated = 0
+    longest = 0
+    for name, part in splits.items():
+        for record in part:
+            pair_max, gold_pair = count_tokens(record["text"], record["label"])
+            longest = max(longest, pair_max)
+            if pair_max > max_tokens:
+                over.append(f"{name}:{record['id']} ({pair_max} tokens)")
+            if name == "train" and gold_pair > train_max_tokens:
+                truncated += 1
+    if over:
+        raise ValueError(
+            f"{len(over)} record(s) exceed the {max_tokens}-token pair ceiling with the longest description, "
+            f"which inference rejects rather than truncates: {over[:10]}; shorten or remove them"
+        )
+    return {
+        "longest_pair_tokens": longest,
+        "training_pairs_cut_at": train_max_tokens,
+        "training_records_cut": truncated,
+    }
 
 
 def load_byod_dataset(path: str | Path) -> list[dict[str, Any]]:

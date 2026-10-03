@@ -39,8 +39,9 @@ LABELS = sorted({r["label"] for r in RECORDS})
 TEMPLATE = "This customer message is about {}."
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipe():
+    # A fresh pretrained pipeline per test: adapt() refuses an already-adapted pipeline (ZSC-M1).
     return BARTZeroShotClassificationPipeline.from_pretrained(device="cpu")
 
 
@@ -147,3 +148,12 @@ def test_adapt_is_transactional_when_the_progress_callback_raises(pipe):
     after = pipe._model.state_dict()
     assert all(torch.equal(before[k], after[k]) for k in before) and pipe.adapter is None
     assert not any(p.requires_grad for p in pipe._model.parameters())
+
+
+def test_adapt_refuses_an_adapted_pipeline_and_a_fresh_load_starts_from_the_base(pipe):
+    """ZSC-M1: a second adapt() on one object would train on top of the first and call epoch 0 "frozen"."""
+    pipe.adapt(RECORDS[:9], None, labels=LABELS, epochs=1, trainable_decoder_layers=2, batch_size=6)
+    with pytest.raises(ValueError, match="already adapted"):
+        pipe.adapt(RECORDS[:9], None, labels=LABELS, epochs=1, trainable_decoder_layers=1, batch_size=6)
+    fresh = BARTZeroShotClassificationPipeline.from_pretrained(device="cpu")
+    assert fresh.adapter is None and fresh.evaluate(RECORDS[:3], LABELS)["adapted"] is False

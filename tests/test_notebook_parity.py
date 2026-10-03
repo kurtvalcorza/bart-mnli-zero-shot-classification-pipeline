@@ -138,7 +138,13 @@ def test_isolated_runtime_routes_every_later_cell(notebook: dict) -> None:
     kernel = [i for i, src in enumerate(code) if "# dimer: kernel cell" in src]
     assert kernel == [0, 1], f"only the first two code cells may run in the kernel, got {kernel}"
     install, router = code[0], code[1]
-    assert 'uv, "venv", "--quiet", "--python", sys.executable' in install
+    # ZSC-m1: the fleet mechanism — managed CPython, verified uv wheel, hash-locked install, Linux x86_64 only.
+    assert '"venv", "--quiet", "--managed-python", "--python", MANAGED_PYTHON' in install
+    assert f"MANAGED_PYTHON = {TEMPLATE['managed_python']!r}" in install
+    assert '"--require-hashes", "--only-binary", ":all:"' in install
+    assert "UV_SHA256 = " in install and "LOCK_SHA256 = " in install
+    assert 'platform.machine() != "x86_64"' in install
+    assert "sys.executable" not in install.split("SKIP_INSTALL = ", 1)[1]
     assert "_ip.input_transformers_cleanup.append(_route_to_isolated_runtime)" in router
     assert 'MPLBACKEND="Agg"' in router and 'DIMER_NOTEBOOK_CI_PREINSTALLED="1"' in router
 

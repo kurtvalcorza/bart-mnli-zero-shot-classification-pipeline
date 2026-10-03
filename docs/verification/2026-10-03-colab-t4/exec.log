@@ -1,0 +1,178 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/bart-mnli-zero-shot-classification-pipeline-ee128d2-88df3e/bart_zero_shot_classification_colab_ee128d2_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/15 - Infrastructure: install the locked runtime into an isolated environment...
+{'isolated_environment': '/content/dimer_isolated_env', 'isolated_python': '3.12.12', 'kernel_python': '3.13.15', 'locked_packages': 47, 'setup_seconds': 58}
+[colab] Executing cell 2/15 - Route the remaining cells to the isolated environment...
+Every later code cell now runs in /content/dimer_isolated_env/bin/python (pid 4376).
+[colab] Executing cell 3/15 - bart_zero_shot_classification-07...
+{'notebook_source': {'repository': 'bart-mnli-zero-shot-classification-pipeline', 'repository_revision': '49a5548fba393aba08670b1c133b8f995caf7bd6', 'embedded_module': 'src/bart_zero_shot_classification_pipeline/pipeline.py', 'embedded_modules': ['src/bart_zero_shot_classification_pipeline/metrics.py', 'src/bart_zero_shot_classification_pipeline/pipeline.py', 'src/bart_zero_shot_classification_pipeline/samples.py'], 'module_sha256': 'c648ff7d4ead21f50497f3d33eda333dcb5b75b42504ba7a6c629f031ab12aef', 'generator': 'build_notebook.py/2.1', 'notebook_spec': '2.2'}, 'python': '3.12.12', 'torch': '2.14.0+cu130', 'transformers': '4.57.6', 'cuda': True}
+[colab] Executing cell 4/15 - bart_zero_shot_classification-09...
+[colab] Executing cell 5/15 - bart_zero_shot_classification-11...
+[colab] Executing cell 6/15 - bart_zero_shot_classification-13...
+[colab] Executing cell 7/15 - bart_zero_shot_classification-15...
+{'model_id': 'facebook/bart-large-mnli', 'revision': 'd7645e127eaf1aefc7862fd59a17a5aa8558b8ce', 'license': 'mit', 'files': 7, 'total_bytes': 1632153123}
+{'weights_dir': '/content/weights/bart-large-mnli', 'fetched': ['README.md', 'config.json', 'merges.txt', 'model.safetensors', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json']}
+{'verified_files': 7, 'revision': 'd7645e127eaf1aefc7862fd59a17a5aa8558b8ce'}
+{'device': 'cuda:0', 'source': 'local-snapshot'}
+[colab] Executing cell 8/15 - bart_zero_shot_classification-17...
+{'data_source': 'Banking77 (PolyAI-LDN/task-specific-datasets @ 57ec275d8078af65b7731c2a98be812d844a6d6b; CC BY 4.0 (Casanueva et al. 2020; PolyAI-LDN/task-specific-datasets)), 10 of 77 intents', 'raw_rows': {'train': 10003, 'test': 3080}, 'splits': {'train': 400, 'validation': 100, 'test': 200}, 'file_sha256': {'train': 'b06e26ac6755...', 'test': 'd12d6e3bc4c3...'}}
+{'token_budget': {'longest_pair_tokens': 85, 'training_pairs_cut_at': 256, 'training_records_cut': 0}, 'pair_ceiling': 1024}
+category ID                            description (set A)                        train  val  test
+card_arrival                           card arrival                                  40   10    20
+lost_or_stolen_card                    a lost or stolen card                         40   10    20
+exchange_rate                          the exchange rate                             40   10    20
+change_pin                             changing the PIN                              40   10    20
+declined_card_payment                  a declined card payment                       40   10    20
+transfer_not_received_by_recipient     a transfer not received by the recipient      40   10    20
+atm_support                            ATM support                                   40   10    20
+age_limit                              the age limit                                 40   10    20
+terminate_account                      closing the account                           40   10    20
+top_up_failed                          a failed top-up                               40   10    20
+{'train': {'n': 400, 'unique_texts': 400, 'text_chars': {'min': 15, 'max': 248}, 'digest': '25a4a21e54ff077d...'}}
+{'validation': {'n': 100, 'unique_texts': 100, 'text_chars': {'min': 13, 'max': 262}, 'digest': 'ab2f1c0a6215978b...'}}
+{'test': {'n': 200, 'unique_texts': 200, 'text_chars': {'min': 14, 'max': 210}, 'digest': 'fe46d67858f595e8...'}}
+One training message per category (the first in split order):
+  [card arrival] How long until my new card gets here?
+  [a lost or stolen card] How do I report my card as lost or stolen?
+  [the exchange rate] What are the exchange rates you assign?
+  [changing the PIN] Do I have to change my PIN at a bank?
+  [a declined card payment] Why are all my card payments being declined?
+  [a transfer not received by the recipient] I haven't received money from a transfer?
+  [ATM support] Where is a Mastercard ATM?
+  [the age limit] I'd like to open an account for my kids can I do that?
+  [closing the account] I want to cancel my account.
+  [a failed top-up] I can't get the top-up to work! What's going on here.
+{'probe': 'duplicate id', 'rejected': "duplicate id 'same'"}
+{'probe': 'label outside the label set', 'rejected': "records[0]: label 'something else' is not in the label set"}
+{'probe': 'missing field', 'rejected': "records[0] is missing 'label'"}
+{'probe': 'too small', 'rejected': '3 records; 8..20000 are required'}
+[colab] Executing cell 9/15 - bart_zero_shot_classification-19...
+Premise: I haven't received money from a transfer?
+{'hypothesis': 'This customer message is about a transfer not received by the recipient.', 'entailment': 3.08, 'neutral': 0.62, 'contradiction': -3.54, 'independent_score': 0.999}
+{'hypothesis': 'This customer message is about ATM support.', 'entailment': -2.53, 'neutral': -0.93, 'contradiction': 3.69, 'independent_score': 0.002}
+{'reference': 'a transfer not received by the recipient', 'predicted': 'a transfer not received by the recipient', 'ranked_scores': [('a transfer not received by the recipient', 0.855), ('a failed top-up', 0.093), ('the exchange rate', 0.023), ('a declined card payment', 0.007), ('card arrival', 0.006), ('changing the PIN', 0.005), ('the age limit', 0.003), ('ATM support', 0.003), ('closing the account', 0.002), ('a lost or stolen card', 0.002)]}
+{'MAX_TEXT_CHARS': 8000, 'MAX_TEXT_TOKENS': 1024, 'MAX_LABELS': 32, 'MAX_LABEL_CHARS': 100, 'HYPOTHESIS_TEMPLATE': 'This example is {}.', 'NUM_NLI_LABELS': 3, 'ENTAILMENT_INDEX': 2, 'CONTRADICTION_INDEX': 0}
+{'decision_rules': {'single': 'multi_label=False: softmax over the entailment logit across labels, argmax picks the label; no minimum score', 'multi': 'multi_label=True (or a single label): per label, softmax over [contradiction, entailment] logits, entailment probability is the score; no threshold applied'}}
+{'id': 't1', 'text': 'one day I will see the world', 'top_label': 'travel', 'scores': {'travel': 0.9939, 'dancing': 0.0033, 'cooking': 0.0029}, 'seconds': 0.039, 'n_tokens': 16}
+{'id': 't2', 'text': 'Whisk the eggs and fold in the flour before baking.', 'top_label': 'cooking', 'scores': {'cooking': 0.9733, 'travel': 0.0182, 'dancing': 0.0085}, 'seconds': 0.024, 'n_tokens': 21}
+{'id': 't3', 'text': 'The tango class meets every Thursday evening.', 'top_label': 'dancing', 'scores': {'dancing': 0.9919, 'travel': 0.0057, 'cooking': 0.0024}, 'seconds': 0.024, 'n_tokens': 18}
+{'first_text_other_mode': {'multi_label': True, 'scores': {'travel': 0.9945, 'dancing': 0.0057, 'cooking': 0.0018}}}
+[colab] Executing cell 10/15 - bart_zero_shot_classification-21...
+{'majority_baseline': {'accuracy': 10.0, 'macro_f1': 1.82, 'n': 200, 'rule': "majority class ('ATM support' for every item)", 'fitted_on': 'training labels', 'tie_rule': '10 labels share the top training count 40; the alphabetically first is used'}}
+{'pretrained_test': {'accuracy': 82.5, 'macro_f1': 81.39, 'n': 200, 'n_labels': 10, 'verdict': 'measured', 'model_state': 'pretrained (not adapted)'}, 'seconds': 12.8}
+{'longest_pair_tokens_scored': 60, 'inference_ceiling': 1024, 'training_truncation': 256}
+category                                   support  precision  recall     F1
+ATM support                                     20      100.0    20.0   33.3
+a declined card payment                         20       79.2    95.0   86.4
+a failed top-up                                 20      100.0    80.0   88.9
+a lost or stolen card                           20       85.0    85.0   85.0
+a transfer not received by the recipient        20       59.4    95.0   73.1
+card arrival                                    20       50.0    70.0   58.3
+changing the PIN                                20      100.0   100.0  100.0
+closing the account                             20      100.0   100.0  100.0
+the age limit                                   20      100.0    80.0   88.9
+the exchange rate                               20      100.0   100.0  100.0
+First four test messages, pretrained model (top three scores):
+{'text': "I ordered my card 2 weeks ago and it still isn't here? What do I do?", 'reference': 'card arrival', 'predicted': 'card arrival', 'top3': [('card arrival', 0.37), ('a transfer not received by the recipient', 0.259), ('a failed top-up', 0.225)]}
+{'text': 'Oh no!  I lost my card!  Help!', 'reference': 'a lost or stolen card', 'predicted': 'a lost or stolen card', 'top3': [('a lost or stolen card', 0.642), ('a failed top-up', 0.132), ('a declined card payment', 0.121)]}
+{'text': 'How do I open up an account for my child?', 'reference': 'the age limit', 'predicted': 'a transfer not received by the recipient', 'top3': [('a transfer not received by the recipient', 0.231), ('the age limit', 0.196), ('card arrival', 0.168)]}
+{'text': 'Where can I find instructions to change my PIN?', 'reference': 'changing the PIN', 'predicted': 'changing the PIN', 'top3': [('changing the PIN', 0.787), ('a lost or stolen card', 0.06), ('a transfer not received by the recipient', 0.045)]}
+**Pretrained model, test split (rows: reference; columns P1..P10 in the same order)**
+
+| gold \ predicted | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | P10 | support |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| P1 ATM support | 4 | 3 | 0 | 0 | 0 | 13 | 0 | 0 | 0 | 0 | 20 |
+| P2 a declined card payment | 0 | 19 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 20 |
+| P3 a failed top-up | 0 | 2 | 16 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 20 |
+| P4 a lost or stolen card | 0 | 0 | 0 | 17 | 3 | 0 | 0 | 0 | 0 | 0 | 20 |
+| P5 a transfer not received by the recipient | 0 | 0 | 0 | 0 | 19 | 1 | 0 | 0 | 0 | 0 | 20 |
+| P6 card arrival | 0 | 0 | 0 | 3 | 3 | 14 | 0 | 0 | 0 | 0 | 20 |
+| P7 changing the PIN | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 20 |
+| P8 closing the account | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 20 |
+| P9 the age limit | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 16 | 0 | 20 |
+| P10 the exchange rate | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 20 |
+{'pretrained_beats_majority': True}
+[colab] Executing cell 11/15 - bart_zero_shot_classification-23...
+{'epoch': 0, 'train_loss': None, 'val_accuracy': 84.0, 'val_macro_f1': 82.61, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 0.3126, 'val_accuracy': 94.0, 'val_macro_f1': 93.92}
+{'epoch': 2, 'train_loss': 0.179, 'val_accuracy': 98.0, 'val_macro_f1': 97.99}
+{'trainable_parameters': 34646019, 'total_parameters': 407344131, 'pairs_per_record': 2, 'best_epoch': 2, 'selection': 'highest validation accuracy', 'seconds': 42.7}
+[colab] Executing cell 12/15 - bart_zero_shot_classification-25...
+{'accuracy': {'majority': 10.0, 'pretrained': 82.5, 'adapted': 96.0}}
+{'macro_f1': {'majority': 1.82, 'pretrained': 81.39, 'adapted': 95.96}}
+{'delta_vs_frozen': {'accuracy': 13.5, 'macro_f1': 14.57}}
+category                                   support  majority  pretrained  adapted   (F1)
+ATM support                                     20      18.2        33.3     95.2
+a declined card payment                         20       0.0        86.4     97.6
+a failed top-up                                 20       0.0        88.9     95.0
+a lost or stolen card                           20       0.0        85.0     90.0
+a transfer not received by the recipient        20       0.0        73.1     94.7
+card arrival                                    20       0.0        58.3     89.5
+changing the PIN                                20       0.0       100.0    100.0
+closing the account                             20       0.0       100.0    100.0
+the age limit                                   20       0.0        88.9     97.6
+the exchange rate                               20       0.0       100.0    100.0
+**Adapted model, test split (rows: reference; columns P1..P10 in the same order)**
+
+| gold \ predicted | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | P10 | support |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| P1 ATM support | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 |
+| P2 a declined card payment | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 |
+| P3 a failed top-up | 0 | 1 | 19 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 |
+| P4 a lost or stolen card | 0 | 0 | 1 | 18 | 0 | 0 | 0 | 0 | 1 | 0 | 20 |
+| P5 a transfer not received by the recipient | 1 | 0 | 0 | 0 | 18 | 1 | 0 | 0 | 0 | 0 | 20 |
+| P6 card arrival | 1 | 0 | 0 | 2 | 0 | 17 | 0 | 0 | 0 | 0 | 20 |
+| P7 changing the PIN | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 0 | 20 |
+| P8 closing the account | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 0 | 0 | 20 |
+| P9 the age limit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 0 | 20 |
+| P10 the exchange rate | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 20 |
+{'adapted_beats_pretrained_accuracy': True, 'categories_with_lower_f1_after_adaptation': []}
+{'report': 'outputs/bart_zero_shot_classification_evaluation_report.json'}
+[colab] Executing cell 13/15 - bart_zero_shot_classification-27...
+{'paired_counts': {'corrected': 28, 'new_error': 1, 'unchanged_correct': 164, 'unchanged_incorrect': 2, 'changed_incorrect_to_incorrect': 5}, 'changed_predictions': 34}
+--- corrected: showing 3 of 28
+{'text': 'How do I open up an account for my child?', 'reference': 'the age limit', 'pretrained': ('a transfer not received by the recipient', 0.231), 'adapted': ('the age limit', 0.92)}
+{'text': 'Could I open an account for my children?', 'reference': 'the age limit', 'pretrained': ('a transfer not received by the recipient', 0.239), 'adapted': ('the age limit', 0.946)}
+{'text': 'My card has not arrived yet.', 'reference': 'card arrival', 'pretrained': ('a transfer not received by the recipient', 0.458), 'adapted': ('card arrival', 0.933)}
+--- new_error: showing 1 of 1
+{'text': 'Im waiting for my transaction to go through.', 'reference': 'a transfer not received by the recipient', 'pretrained': ('a transfer not received by the recipient', 0.407), 'adapted': ('card arrival', 0.484)}
+--- unchanged_incorrect: showing 2 of 2
+{'text': 'How do I track my card?', 'reference': 'card arrival', 'pretrained': ('a lost or stolen card', 0.638), 'adapted': ('a lost or stolen card', 0.743)}
+{'text': "I still don't have my card after 2 weeks.  What should I do?", 'reference': 'card arrival', 'pretrained': ('a lost or stolen card', 0.292), 'adapted': ('a lost or stolen card', 0.445)}
+[colab] Executing cell 14/15 - bart_zero_shot_classification-29...
+category ID                            A — original                               B — paraphrased
+card_arrival                           card arrival                               the delivery of a new card
+lost_or_stolen_card                    a lost or stolen card                      a card that has gone missing or been stolen
+exchange_rate                          the exchange rate                          the currency conversion rate
+change_pin                             changing the PIN                           updating the card's PIN code
+declined_card_payment                  a declined card payment                    a card payment that was refused
+transfer_not_received_by_recipient     a transfer not received by the recipient   money sent that the recipient has not received
+atm_support                            ATM support                                help with using a cash machine
+age_limit                              the age limit                              the minimum age requirement
+terminate_account                      closing the account                        cancelling the account
+top_up_failed                          a failed top-up                            a top-up that did not go through
+{'description_set': 'A', 'accuracy': 84.0, 'macro_f1': 82.61, 'n': 100}
+{'description_set': 'B', 'accuracy': 82.0, 'macro_f1': 82.38, 'n': 100}
+{'changed_predictions': 17, 'changed_fraction': 0.17, 'correct_to_incorrect': 7, 'incorrect_to_correct': 5, 'incorrect_to_other_incorrect': 5}
+Changed examples (up to four, in validation-split order; 17 changed in total):
+{'text': 'I thought I would have received my new card at this point.', 'reference_id': 'card_arrival', 'A': ('a transfer not received by the recipient', 0.381), 'B': ('the delivery of a new card', 0.506)}
+{'text': 'I can use this card at which ATMs?', 'reference_id': 'atm_support', 'A': ('card arrival', 0.41), 'B': ('help with using a cash machine', 0.402)}
+{'text': 'Where are the ATMs that accept this card?', 'reference_id': 'atm_support', 'A': ('card arrival', 0.301), 'B': ('money sent that the recipient has not received', 0.353)}
+{'text': 'My daughter needs to open account.', 'reference_id': 'age_limit', 'A': ('card arrival', 0.289), 'B': ('money sent that the recipient has not received', 0.468)}
+Your own change (set C): not run. Set MY_CATEGORY_ID and MY_DESCRIPTION above, then run only this cell again.
+{'activity_record': 'outputs/bart_zero_shot_classification_description_activity.json'}
+[colab] Executing cell 15/15 - bart_zero_shot_classification-31...
+{'id': 'new-00', 'text': 'What ATMs take this card?', 'adapted': 'ATM support', 'score': 0.488, 'gold': 'ATM support'}
+{'id': 'new-01', 'text': "I'm not sure why my card didn't work", 'adapted': 'a declined card payment', 'score': 0.804, 'gold': 'a declined card payment'}
+{'id': 'new-02', 'text': 'I think my top-up has failed.', 'adapted': 'a failed top-up', 'score': 0.933, 'gold': 'a failed top-up'}
+{'id': 'new-03', 'text': 'Has there been any activity on my card today?', 'adapted': 'card arrival', 'score': 0.529, 'gold': 'a lost or stolen card'}
+{'id': 'new-04', 'text': 'What is the time frame that it usually takes for a transfer to come th', 'adapted': 'a transfer not received by the recipient', 'score': 0.949, 'gold': 'a transfer not received by the recipient'}
+{'id': 'new-05', 'text': "What can I do if my card still hasn't arrived after 2 weeks?", 'adapted': 'card arrival', 'score': 0.88, 'gold': 'card arrival'}
+{'id': 'new-06', 'text': 'Is it possible for me to change my PIN number?', 'adapted': 'changing the PIN', 'score': 0.992, 'gold': 'changing the PIN'}
+{'id': 'new-07', 'text': 'Are you able to delete my account?', 'adapted': 'closing the account', 'score': 0.97, 'gold': 'closing the account'}
+{'id': 'new-08', 'text': 'How old do you need to be to use the banks services?', 'adapted': 'the age limit', 'score': 0.994, 'gold': 'the age limit'}
+{'id': 'new-09', 'text': 'What is my money worth in other countries?', 'adapted': 'the exchange rate', 'score': 0.987, 'gold': 'the exchange rate'}
+{'new_messages': {'verdict': 'sample-sanity', 'accuracy': 0.9, 'reason': 'gold labels were supplied for 10 item(s); the accuracy is a plumbing check on that sample, not a benchmark'}, 'evaluate_verdict': 'measured-small-sample', 'macro_f1': 86.67}
+{'artifact': 'outputs/bart_zero_shot_classification_adapter', 'format': 'org.valcorza.bart-large-mnli.adapter.v1', 'tensors': 56, 'bytes': 138590612, 'sha256': 'ef40c5376046251d...', 'categories_recorded': 10}
+{'reload_parity': {'identical_labels': 200, 'of': 200, 'max_score_difference': 0.0, 'score_tolerance': 1e-05, 'metrics_identical': True, 'boundary': 'new pipeline object built from the saved files in this kernel process'}, 'reloaded_best_epoch': 2}
+['bart_zero_shot_classification_adapter', 'bart_zero_shot_classification_description_activity.json', 'bart_zero_shot_classification_evaluation_report.json', 'bart_zero_shot_classification_input_manifest.json', 'bart_zero_shot_classification_predictions.csv', 'bart_zero_shot_classification_result.json', 'bart_zero_shot_classification_train.csv']
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/bart-mnli-zero-shot-classification-pipeline-ee128d2-88df3e/bart_zero_shot_classification_colab_ee128d2_colab-cli-t4_output.ipynb'...
