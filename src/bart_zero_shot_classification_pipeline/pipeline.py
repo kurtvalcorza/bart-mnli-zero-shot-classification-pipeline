@@ -418,6 +418,24 @@ class BARTZeroShotClassificationPipeline:
             "model_revision": MODEL_REVISION,
         }
 
+    def count_pair_tokens(
+        self,
+        text: str,
+        labels: Sequence[str],
+        *,
+        hypothesis_template: str = HYPOTHESIS_TEMPLATE,
+    ) -> dict[str, int]:
+        """BPE tokens of every (text, template(label)) pair exactly as ``classify`` encodes it (no
+        truncation), without running the model, so a dataset can be checked against MAX_TEXT_TOKENS before
+        any model call."""
+        _model, tokenizer = self._require_model()
+        text = _check_text(text)
+        clean = _check_labels(labels)
+        template = _check_template(hypothesis_template)
+        hypotheses = [template.format(label) for label in clean]
+        encoded = tokenizer([text] * len(hypotheses), hypotheses, truncation=False)
+        return {label: len(ids) for label, ids in zip(clean, encoded["input_ids"], strict=True)}
+
     # ---- adaptation -----------------------------------------------------------------------------------
 
     def _require_model(self) -> tuple[Any, Any]:
@@ -526,6 +544,14 @@ class BARTZeroShotClassificationPipeline:
         if not isinstance(batch_size, int) or not 1 <= batch_size <= 64:
             raise ValueError("batch_size must be an int in 1..64")
         template = _check_template(hypothesis_template)
+        if self.adapter is not None:
+            # adapt() trains from the weights in memory and records epoch 0 as the frozen model; on an
+            # adapted (or artifact-loaded) pipeline that would stack a second adaptation and export only the
+            # latest tensor set.
+            raise ValueError(
+                "this pipeline is already adapted; adapt() starts from the pretrained base, so build a fresh "
+                "pipeline with from_pretrained() first"
+            )
         names = self._trainable_names(trainable_decoder_layers)
         train_checked = validate_dataset(train, labels=labels)["records"]
         label_list = _check_labels(list(labels) if labels is not None else label_names(train_checked))

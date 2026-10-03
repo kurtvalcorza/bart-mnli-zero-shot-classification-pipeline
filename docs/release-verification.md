@@ -19,8 +19,12 @@ CI runs `tools/validate_release_assets.py`, which checks:
   path; one cell per carried module (`pipeline.py`, `samples.py`, `metrics.py`), each equal to its source after the
   generator's documented rewrites; the inline `MANIFEST` equal to the committed 7-entry snapshot manifest and the
   inline `PINS` equal to the `pyproject.toml` runtime pins; the notebook byte-identical (on LF) to
-  `tools/build_notebook.py` output for its recorded revision; the pinned-install cell with its
-  restart-on-stale-import guard; `NOTEBOOK_SOURCE` recorded in exports;
+  `tools/build_notebook.py` output for its recorded revision; the isolated-environment install cell (managed
+  CPython, `uv` wheel checked by size and SHA-256, the carried hash-locked lock installed with `--require-hashes
+  --only-binary :all:`, Linux x86_64 check) and the executor-only stale-import guard; `NOTEBOOK_SOURCE` recorded in
+  exports; no bare `assert` in learner cells; the review-fix markers (re-runs reload the pretrained model, the BYOD
+  token budget and upload guards, the set C activity, Troubleshooting and Glossary) and no stale install or BYOD
+  text;
 - `MODEL_ID`/`MODEL_REVISION` bound only in the carried module cell (and repeated in the inline manifest, which the
   notebook asserts against the module before fetching), the revision a 40-hex immutable commit, and the same
   identity string in `README.md`, `MODEL_CARD.md` and `docs/WEIGHTS.md` with no stray revisions (the pinned corpus
@@ -81,13 +85,15 @@ Before changing the registry status from `Candidate` to `Release-grade`:
    `metadata.dimer.generated_from` and that the installed core package versions equal the inline `PINS`
    (= `pyproject.toml`): `torch==2.14.0`, `transformers==4.57.6`, `tokenizers==0.22.2`, `huggingface-hub==0.36.2`,
    `safetensors==0.8.0`, `numpy==2.5.3`. Since 2026-09-27 Section 1 installs the pins into a separate `uv`
-   environment (`dimer_isolated_env/`, created from the kernel's own Python) and routes every later code cell to
-   one persistent Python process in it, so no restart is expected: the kernel's pre-imported packages (Colab
+   environment (`dimer_isolated_env/`) and routes every later code cell to one persistent Python process in it, so
+   no restart is expected; since the 2026-10-03 review fixes that environment uses a managed CPython 3.12.12 and the
+   hash-locked `tutorials/requirements-colab.lock.txt` (47 packages), and the runtime is Linux x86_64 only: the kernel's pre-imported packages (Colab
    imports NumPy and `cuda-bindings` before the first cell) are never replaced. Confirm the router cell prints
    `Every later code cell now runs in …dimer_isolated_env/bin/python` and the runtime record reports the pinned
    versions;
 5. verify every default-path stage completes:
-   - pinned runtime installed from the inline `PINS` into the isolated environment with no GitHub access;
+   - locked runtime installed into the isolated environment (the install cell prints `isolated_python` 3.12.12 and
+     `locked_packages` 47; the runtime record reports the pinned versions);
    - the three carried module cells execute (defining `BARTZeroShotClassificationPipeline`, `verify_snapshot`,
      `stage_missing_files`, `validate_inputs`, `evaluation_report`, `accuracy`, `fetch_corpus`, `read_corpus`,
      `filter_records`, `build_sample_dataset`, `validate_dataset`, `label_names`, `check_split_disjoint`,
@@ -133,7 +139,7 @@ Before changing the registry status from `Candidate` to `Release-grade`:
      `pipe.save_artifact` writing `outputs/…_adapter/{adapter.safetensors,manifest.json}` (56 tensors, about 139 MB)
      with the category IDs, descriptions, template and scoring configuration in its metadata, and
      `BARTZeroShotClassificationPipeline.from_artifact` rescoring all 200 test messages with identical predictions,
-     score differences within 1e-5 and identical metrics (the cell asserts it; this is a new pipeline object built
+     score differences within 1e-5 and identical metrics (the cell raises a named error otherwise; this is a new pipeline object built
      from the saved files in the same kernel process); `outputs/…_result.json` written with `NOTEBOOK_SOURCE`, the
      model identity and licence, the snapshot block (`weight_format`, `weight_sha256`), the `corpus` block with the
      label set, the inference-contract items, the classification setup, the comparison, the paired changes, the
@@ -172,6 +178,24 @@ stated runtime, not general estimates.
 | 2026-09-19 | `2559a76` / `9c599285` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | Default sample path (install skipped, pins pre-installed → three carried modules → inline manifest assert → `stage_missing_files` fetched 0 of 7 entries because the snapshot was pre-staged → `verify_snapshot` 7 files → `from_pretrained` on CPU → `fetch_corpus` served from the pre-staged cache after its digest checks → 10,003 + 3,080 rows read, 400 / 100 / 200 balanced records drawn with `check_split_disjoint` clean and digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…` → four dataset refusals → input manifest + duplicate-label refusal probe → three synthetic sentences classified in both score modes with every sanity check `True` → majority baseline → frozen evaluation → `adapt` → validation + test evaluation → ten unseen messages → adapter export → reload parity) | 342.1 s | **PASSED** — 11/11 code cells; majority accuracy 10.0 / macro-F1 1.82; frozen zero-shot test 82.5 / 81.39 (54.2 s; per-label F1 from 33.3 on `ATM support` to 100 on three phrases); `adapt` 34,646,019 of 407,344,131 params, 800 pairs from 400 messages, 2 epochs, 192.6 s, validation accuracy 84.0 → 96.0 → 98.0 (`best_epoch` 2, train loss 0.289 → 0.167); **adapted test accuracy 97.0 / macro-F1 96.99 (Δ +14.5 / +15.6; every per-label F1 ≥ 92.3)**; ten unseen messages `sample-sanity` accuracy 0.8, `measured-small-sample`; adapter 138,590,612 B / 56 tensors, SHA-256 `30e53f03…`; reload parity 8/8; six exports written. Pre-flight; hosted clean-runtime run still required |
 | 2026-09-14 | `34098a7` / `f8a761ce5419` (`TASK-INFERENCE`, superseded) | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | Default sample path of the inference-only notebook: three synthetic sentences, `stage_missing_files` fetching `model.safetensors` from the Hub, `verify_snapshot`, `classify` in both modes, `sample-sanity` report | 280.7 s | **PASSED** — 8/8 code cells (1 restart after the install cell), 4 outputs verified, 1632 MB staged; does not cover the `E2E` blob |
 
+## Notebook review fixes (2026-10-03)
+
+The 2026-10-02 review (`docs/reviews/2026-10-02-notebook-review/`, ZSC-M1..M2, ZSC-m1..m5) was fixed in the
+generator, the carried `pipeline.py` / `samples.py` and the validator; see `tutorials/README.md` for the list. The
+regenerated notebook is a new blob with **no hosted run**: the 2026-09-27 Colab T4 PASS above belongs to blob
+`f652fd671322` and does not qualify it. Offline checks only (not clean-runtime evidence): unit and regression
+tests, including a tiny randomly initialised stand-in model that runs the notebook's own cells through the
+default BYOD pass and both prescribed re-runs, and a local real-weights CPU probe (Windows, `torch 2.13.0+cpu`,
+`transformers 4.57.6`, not the pinned torch; install skipped with `DIMER_NOTEBOOK_CI_PREINSTALLED=1`; the cells
+executed verbatim from the regenerated notebook) of Sections 1-6 and the Section 10 activity: snapshot staged from
+the Hub and verified, Banking77 digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…`, token budget longest pair 85
+tokens and 0 training messages cut, majority 10.0 / 1.82 and pretrained 82.5 / 81.39 (identical to the recorded
+runs), wording activity A 84.0 / 82.61 and B 82.0 / 82.38 with 17 changed (identical), and a learner change
+(`atm_support` → "a problem using a cash machine") scoring set C 89.0 / 88.97, that category's F1 33.3 → 84.2,
+7 predictions changed (6 incorrect→correct, 1 correct→incorrect). The new install path (managed Python, hash-locked manylinux wheels) has not executed
+anywhere yet. Before promotion: a hosted Colab T4 `Run all` of the new blob covering the default path, a BYOD
+positive and negative run, an optional-experiment re-run and the set C activity.
+
 ## Current status
 
-**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The notebook stays Candidate pending maintainer review of that evidence, review of the paraphrased description set B, and an exercised BYOD path. The local pre-flights of the revised notebook are recorded below it.
+**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The 2026-10-03 review fixes (section above) produced a new blob with no hosted run yet, so that PASS no longer covers the current notebook. The notebook stays Candidate pending a hosted run of the new blob, maintainer review of that evidence, review of the paraphrased description set B, and an exercised BYOD path. The local pre-flights of the revised notebook are recorded below it.
