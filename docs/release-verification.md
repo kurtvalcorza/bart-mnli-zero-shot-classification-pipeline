@@ -170,6 +170,7 @@ stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
+| 2026-10-03 | `ee128d2df43d817d3eee8044c75a519e81db742e` / `7c6a436ff20dee4beb4a3ec3b9cd35472ea35e4c` (current review-fix version) | Colab CLI sequential execution (`colab exec -f`), fresh VM, Tesla T4 (`gpu: T4`, device `cuda:0`); not a browser `Run all`, so the saved notebook has no execution counts; cell order is taken from `exec.log` (cells 1..15 in sequence) | Default settings only (`USE_BYOD = False`, set C activity not configured, every other form parameter at its default); no repository checkout; empty Hugging Face cache (all 7 snapshot files fetched) | 245.9 s | **one pass, no restart, 0 errors**; 15/15 code cells (cells 4-6 are carried module definitions with no output by design); executed code-cell sources identical to the blob; metrics below; [retained evidence](verification/2026-10-03-colab-t4/) |
 | 2026-09-27 | `6141d4f` / blob `f652fd671322` (the executed file's 33 cells equal this blob; uploaded file sha256 `6676ec05ba40…`) | Google Colab, **T4** runtime; kernel Python 3.13.15; isolated environment `/content/dimer_isolated_env` (`torch 2.14.0+cu130`, `transformers 4.57.6`, `cuda:0`) | Default sample path, `Run all` with no restart: pins installed into the isolated environment, every later cell routed to its worker; snapshot staged from the Hub and verified (7 files); Banking77 fetched; refusal probes; inference contract; baseline and pretrained model; two-epoch adaptation; comparison; paired changes; wording activity; export and reload | — (pretrained test 13.9 s, adaptation 48.1 s) | **PASSED** — 15/15 code cells, execution counts 1–15, no errors. Test accuracy / macro-F1: majority (fitted on training labels) 10.0 / 1.82, pretrained 82.5 / 81.39, adapted 96.0 / 95.96 (best epoch 2; no category's F1 fell). The adapted figure differs from the CPU pre-flights (97.0 / 96.99) and equals the 2026-09-19 Kaggle T4 run, consistent with GPU non-determinism in training. Paired changes: 28 corrected, 1 new error, 164 unchanged correct, 2 unchanged incorrect, 5 changed incorrect. Wording activity (pretrained, validation): set A 84.0 / 82.61, set B 82.0 / 82.38; 17 changed (7 correct→incorrect, 5 incorrect→correct, 5 to another wrong category). Reload parity 200/200, max score difference 0.0, identical metrics |
 | 2026-09-27 | This branch (isolated runtime; file sha256 `77a3a4b9359a…`, blob `f652fd671322`) | Local pre-flight in a real Jupyter kernel (Linux container, CPU; `nbclient` + `ipykernel` on managed CPython 3.12.12 with **NumPy 2.1.3 imported by an IPython startup file before the first cell**, as Colab does; `DIMER_NOTEBOOK_CI_PREINSTALLED` unset; no `uv` on PATH, so the notebook installed `uv==0.8.17` with pip; the worker's pins resolved from the PyTorch CPU index, `torch 2.14.0+cpu`; fresh working directory) | Default sample path, `Run all`: install cell created `dimer_isolated_env/` from the kernel's Python and installed the pins; router cell started the worker; all 13 routed cells ran in it with the kernel's NumPy untouched | 769 s | PASS — pre-flight only, **not** promotion evidence. 15/15 code cells, execution counts 1–15, no errors; runtime record `torch 2.14.0+cpu`, `transformers 4.57.6`, Python 3.12.12. Figures identical to the previous pre-flight: test accuracy / macro-F1 majority 10.0 / 1.82, pretrained 82.5 / 81.39, adapted 97.0 / 96.99; paired changes 30 corrected, 1 new error; wording activity A 84.0 / 82.61, B 82.0 / 82.38, 17 changed; reload parity 200/200, max score difference 0.0 |
 | 2026-09-27 | `4864c5a` / blob `1ab5e1f6a8ba` (the executed file's 29 cells equal this blob) | Google Colab, **T4** runtime | Default `Run all` | — | **FAILED** in Section 1 (execution count 1; no later cell ran): `RuntimeError: Core dependencies changed while older modules were loaded: cuda-bindings: loaded=12.9.7, installed=13.4.3; numpy: loaded=2.1.3, installed=2.5.3`. Colab imports these before the first cell, so the in-kernel pinned install could not take effect without a restart, which DIMER Notebook Specification 2.2 §5 does not allow. Fixed by the isolated runtime (row above) |
@@ -178,11 +179,42 @@ stated runtime, not general estimates.
 | 2026-09-19 | `2559a76` / `9c599285` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | Default sample path (install skipped, pins pre-installed → three carried modules → inline manifest assert → `stage_missing_files` fetched 0 of 7 entries because the snapshot was pre-staged → `verify_snapshot` 7 files → `from_pretrained` on CPU → `fetch_corpus` served from the pre-staged cache after its digest checks → 10,003 + 3,080 rows read, 400 / 100 / 200 balanced records drawn with `check_split_disjoint` clean and digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…` → four dataset refusals → input manifest + duplicate-label refusal probe → three synthetic sentences classified in both score modes with every sanity check `True` → majority baseline → frozen evaluation → `adapt` → validation + test evaluation → ten unseen messages → adapter export → reload parity) | 342.1 s | **PASSED** — 11/11 code cells; majority accuracy 10.0 / macro-F1 1.82; frozen zero-shot test 82.5 / 81.39 (54.2 s; per-label F1 from 33.3 on `ATM support` to 100 on three phrases); `adapt` 34,646,019 of 407,344,131 params, 800 pairs from 400 messages, 2 epochs, 192.6 s, validation accuracy 84.0 → 96.0 → 98.0 (`best_epoch` 2, train loss 0.289 → 0.167); **adapted test accuracy 97.0 / macro-F1 96.99 (Δ +14.5 / +15.6; every per-label F1 ≥ 92.3)**; ten unseen messages `sample-sanity` accuracy 0.8, `measured-small-sample`; adapter 138,590,612 B / 56 tensors, SHA-256 `30e53f03…`; reload parity 8/8; six exports written. Pre-flight; hosted clean-runtime run still required |
 | 2026-09-14 | `34098a7` / `f8a761ce5419` (`TASK-INFERENCE`, superseded) | Kaggle CPU (`kurtvalcorza/dimer-nb2-bart-zero-shot-classification` v1) | Default sample path of the inference-only notebook: three synthetic sentences, `stage_missing_files` fetching `model.safetensors` from the Hub, `verify_snapshot`, `classify` in both modes, `sample-sanity` report | 280.7 s | **PASSED** — 8/8 code cells (1 restart after the install cell), 4 outputs verified, 1632 MB staged; does not cover the `E2E` blob |
 
+### Hosted Colab T4 run (2026-10-03)
+
+Printed by the run: kernel Python 3.13.15; isolated environment `/content/dimer_isolated_env`, Python 3.12.12, 47
+locked packages, setup 58 s; runtime record torch `2.14.0+cu130`, transformers `4.57.6`, `cuda: True`; `NOTEBOOK_SOURCE`
+`49a5548fba393aba08670b1c133b8f995caf7bd6` (the generator stamp in `metadata.dimer.generated_from.revision`, parent of
+the run commit), generator `build_notebook.py/2.1`, notebook spec 2.2; snapshot `facebook/bart-large-mnli@d7645e12` 7
+files fetched (1,632,153,123 bytes), `verified_files: 7`, device `cuda:0`, `source: local-snapshot`; Banking77 10,003 +
+3,080 raw rows, splits 400 / 100 / 200 (40 / 10 / 20 per intent), digests `25a4a21e…` / `ab2f1c0a…` / `fe46d678…`,
+longest pair 85 tokens and 0 training records cut at 256; four dataset refusal probes rejected; the text-hypothesis
+pair (entailment 3.08 for the reference description) and the three synthetic sentences classified as expected in
+both score modes (`travel` 0.9939); majority baseline (fitted on training labels, `ATM support`) 10.0 / 1.82;
+pretrained test accuracy / macro-F1 82.5 / 81.39 (12.8 s), longest scored pair 60 tokens; `adapt` 34,646,019 of
+407,344,131 parameters, 2 pairs per record, validation accuracy 84.0 → 94.0 → 98.0 (train loss 0.3126 → 0.179),
+`best_epoch` 2, 42.7 s; **adapted test 96.0 / 95.96** (Δ vs pretrained +13.5 / +14.57), no category's F1 fell
+(`ATM support` 33.3 → 95.2); paired changes 28 corrected, 1 new error, 164 unchanged correct, 2 unchanged incorrect,
+5 changed incorrect; wording activity (pretrained, validation) set A 84.0 / 82.61, set B 82.0 / 82.38, 17 changed
+(7 correct→incorrect, 5 incorrect→correct, 5 to another wrong category), set C not run; ten unseen messages
+`sample-sanity` accuracy 0.9, `measured-small-sample` macro-F1 86.67; adapter 56 tensors, 138,590,612 bytes,
+SHA-256 `ef40c537…`, 10 categories recorded; reload parity 200/200 identical, max score difference 0.0, identical
+metrics; 7 output entries written. The comparison and paired-change figures equal the 2026-09-27 Colab T4 run of the
+previous blob. These are sample-sanity observations on a 200-message sample, not benchmark claims.
+
+| File | SHA-256 |
+|---|---|
+| `bart_zero_shot_classification_colab_ee128d2_colab-cli-t4_output.ipynb` | `cdf825bd521267725bcde66ac9148e9b73ca8983c94a84b3b0f0d2fd8620fba6` |
+| `run_summary.json` | `0be7a5ed35735ce6a2fc73d73836bdaf6de8a27fdd099f1a89b3ed1eda114f19` |
+| `exec.log` | `47446084047a08fd076ba27b96ebe09f5d0f2178adc51303f6442c09bafd1027` |
+
+Not exercised by this run: the BYOD positive and negative runs, the optional-experiment re-run, the set C wording
+activity, and an equivalent Kaggle run.
+
 ## Notebook review fixes (2026-10-03)
 
 The 2026-10-02 review (`docs/reviews/2026-10-02-notebook-review/`, ZSC-M1..M2, ZSC-m1..m5) was fixed in the
 generator, the carried `pipeline.py` / `samples.py` and the validator; see `tutorials/README.md` for the list. The
-regenerated notebook is a new blob with **no hosted run**: the 2026-09-27 Colab T4 PASS above belongs to blob
+regenerated notebook is a new blob (its hosted Colab T4 run of 2026-10-03 is recorded above): the 2026-09-27 Colab T4 PASS above belongs to blob
 `f652fd671322` and does not qualify it. Offline checks only (not clean-runtime evidence): unit and regression
 tests, including a tiny randomly initialised stand-in model that runs the notebook's own cells through the
 default BYOD pass and both prescribed re-runs, and a local real-weights CPU probe (Windows, `torch 2.13.0+cpu`,
@@ -192,10 +224,10 @@ the Hub and verified, Banking77 digests `25a4a21e…` / `ab2f1c0a…` / `fe46d67
 tokens and 0 training messages cut, majority 10.0 / 1.82 and pretrained 82.5 / 81.39 (identical to the recorded
 runs), wording activity A 84.0 / 82.61 and B 82.0 / 82.38 with 17 changed (identical), and a learner change
 (`atm_support` → "a problem using a cash machine") scoring set C 89.0 / 88.97, that category's F1 33.3 → 84.2,
-7 predictions changed (6 incorrect→correct, 1 correct→incorrect). The new install path (managed Python, hash-locked manylinux wheels) has not executed
-anywhere yet. Before promotion: a hosted Colab T4 `Run all` of the new blob covering the default path, a BYOD
+7 predictions changed (6 incorrect→correct, 1 correct→incorrect). The new install path (managed Python, hash-locked manylinux wheels) has since executed
+in the hosted Colab T4 run recorded above (2026-10-03). Before promotion: a hosted Colab T4 `Run all` of the new blob covering the default path, a BYOD
 positive and negative run, an optional-experiment re-run and the set C activity.
 
 ## Current status
 
-**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The 2026-10-03 review fixes (section above) produced a new blob with no hosted run yet, so that PASS no longer covers the current notebook. The notebook stays Candidate pending a hosted run of the new blob, maintainer review of that evidence, review of the paraphrased description set B, and an exercised BYOD path. The local pre-flights of the revised notebook are recorded below it.
+**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The 2026-10-03 review fixes (section above) produced a new blob (`7c6a436f` at `ee128d2`), so that PASS no longer covers the current notebook; a hosted Colab T4 run of the new blob is recorded: default path, 15/15 code cells in one pass with no restart and 0 errors (Colab CLI sequential execution, not a browser `Run all`). The notebook stays Candidate pending a BYOD positive and negative run, an optional-experiment re-run and the set C activity, an equivalent Kaggle run, maintainer review of that evidence, review of the paraphrased description set B, and an exercised BYOD path. The local pre-flights of the revised notebook are recorded below it.
