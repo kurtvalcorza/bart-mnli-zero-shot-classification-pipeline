@@ -250,9 +250,9 @@ def test_section4_refuses_an_over_ceiling_record_by_id_and_counts_training_cuts(
 
 def test_section4_empty_upload_and_non_colab_runtime_give_recovery_instructions(section4, tmp_path):
     _FakeFiles.payload = {}
-    with pytest.raises(RuntimeError, match="Upload exactly one .csv, .json or .jsonl file .received 0.*BYOD_PATH"):
+    with pytest.raises(ValueError, match="upload exactly one .csv, .json or .jsonl file .received 0.*BYOD_PATH"):
         section4({"USE_BYOD": True})
-    with pytest.raises(RuntimeError, match="needs Google Colab.*BYOD_PATH"):
+    with pytest.raises(ValueError, match="needs Google Colab.*BYOD_PATH"):
         section4({"USE_BYOD": True}, colab=False)
     path = tmp_path / "local.csv"
     path.write_bytes(_csv(_records({"category a": 6, "category b": 6})))
