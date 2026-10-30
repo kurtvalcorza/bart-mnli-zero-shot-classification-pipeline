@@ -79,7 +79,7 @@ print(pipe.classify("one day I will see the world", ["travel", "cooking", "danci
 
 ## Release status
 
-**Candidate** — the notebook was upgraded on 2026-09-27 into the guided unit *Zero-Shot Text Classification — Do Our Labels Change the Answer?* (training-fitted majority baseline, full-vocabulary metrics with confusion matrices, paired examples, the category-wording activity, the classification setup exported with the adapter, and full-test reload parity). The previous Release-grade evidence (Kaggle Tesla T4, blob `f85282d2` at `5ecf2f2`, 2026-09-19) remains in `docs/release-verification.md` as history but does not qualify the revised notebook; a clean hosted run of the new blob must be recorded before the status is promoted again.
+**Candidate** — the notebook was upgraded on 2026-09-27 into the guided unit *Zero-Shot Text Classification — Do Our Labels Change the Answer?* (training-fitted majority baseline, full-vocabulary metrics with confusion matrices, paired examples, the category-wording activity, the classification setup exported with the adapter, and full-test reload parity). The previous Release-grade evidence (Kaggle Tesla T4, blob `f85282d2` at `5ecf2f2`, 2026-09-19) remains in `docs/release-verification.md` as history but does not qualify the revised notebook; a clean hosted run of the new blob must be recorded before the status is promoted again. The current blob `90ff8e07` (DAT20 refusal display, 2026-10-26) passed its default path and a scripted DAT20 refusal on a hosted Colab T4 on 2026-10-26 (`docs/release-verification.md`); the remaining gates are REL12 and REL2, and earlier blobs' runs are history (REL14).
 
 ## Documents
 

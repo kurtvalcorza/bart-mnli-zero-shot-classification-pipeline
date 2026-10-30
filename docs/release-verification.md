@@ -228,6 +228,50 @@ runs), wording activity A 84.0 / 82.61 and B 82.0 / 82.38 with 17 changed (ident
 in the hosted Colab T4 run recorded above (2026-10-03). Before promotion: a hosted Colab T4 `Run all` of the new blob covering the default path, a BYOD
 positive and negative run, an optional-experiment re-run and the set C activity.
 
+### Hosted Colab T4 runs of blob `90ff8e07` (2026-10-26)
+
+These runs executed the PR head `45afae5d999ce05a92df7f525177ff0335bc87a8`, notebook `tutorials/bart_zero_shot_classification_colab.ipynb` blob `90ff8e07bcad11c396f8a6c1a9d0a4b0a21e7433`, fetched at the 40-character SHA and Git-blob verified, with the Colab CLI (`colab exec -f`) on a fresh Colab Tesla T4 session (not a browser `Run all`). Each `run_summary.json` records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released), and the SHA-256 of each executed notebook equals the summary's `executed_sha256`.
+
+**Default path (2026-10-26 17:18:18 UTC start).** Default settings, no overrides; session `suite-bart-45afae5-88df`; wall 264.2 s (`wall_s`); `code_cells` 15, `executed_cells` 12, 0 errors. Retained evidence: [`docs/verification/2026-10-26-colab-t4/`](verification/2026-10-26-colab-t4/).
+
+Printed by the default run (verbatim lines from the executed outputs):
+
+```text
+{'verified_files': 7, 'revision': 'd7645e127eaf1aefc7862fd59a17a5aa8558b8ce'}
+{'majority_baseline': {'accuracy': 10.0, 'macro_f1': 1.82, 'n': 200, 'rule': "majority class ('ATM support' for every item)", 'fitted_on': 'training labels', 'tie_rule': '10 labels share the top training count 40; the alphabetically first is used'}}
+{'pretrained_test': {'accuracy': 82.5, 'macro_f1': 81.39, 'n': 200, 'n_labels': 10, 'verdict': 'measured', 'model_state': 'pretrained (not adapted)'}, 'seconds': 14.1}
+{'accuracy': {'majority': 10.0, 'pretrained': 82.5, 'adapted': 96.0}}
+{'macro_f1': {'majority': 1.82, 'pretrained': 81.39, 'adapted': 95.96}}
+{'trainable_parameters': 34646019, 'total_parameters': 407344131, 'pairs_per_record': 2, 'best_epoch': 2, 'selection': 'highest validation accuracy', 'seconds': 48.9}
+{'paired_counts': {'corrected': 28, 'new_error': 1, 'unchanged_correct': 164, 'unchanged_incorrect': 2, 'changed_incorrect_to_incorrect': 5}, 'changed_predictions': 34}
+{'reload_parity': {'identical_labels': 200, 'of': 200, 'max_score_difference': 0.0, 'score_tolerance': 1e-05, 'metrics_identical': True, 'boundary': 'new pipeline object built from the saved files in this kernel process'}, 'reloaded_best_epoch': 2}
+```
+
+**DAT20 refusal record (2026-10-26, blob `90ff8e07`).** Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_PATH` `''` → `'/content/sample_data/california_housing_test.csv'` (the run copy differs from the blob in exactly those 2 source lines). The suite cut the run copy right after the refusing cell `bart_zero_shot_classification-17`, dropping 15 cells (7 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `578f109ae5ba08a8a93514af194b33d501219d89e292f0eba5e70ac3a8788016` (Git blob `55d7544a`), equal to the summary's `run_copy_sha256`. The cut copy's earlier code cells completed without an error output; the refusing cell's only error output has `ename` `IsolatedCellRefusal` and no traceback, and its output holds exactly one `Refused:` line:
+
+```text
+Refused: california_housing_test.csv: CSV is missing columns ['id', 'label', 'text']. Fix the file, then select this cell and choose Runtime → Run after.
+```
+
+This run says nothing about the 15 cut cells, which did not run in it. Session `suite-bart-45afae5-88df`, wall 144.9 s. Retained evidence: [`docs/verification/2026-10-26-colab-t4-refusal/`](verification/2026-10-26-colab-t4-refusal/).
+
+**Local-path redaction.** Local paths were replaced byte-wise by `<local-run-dir>` (and the Colab CLI install path by `<colab-cli-tool-dir>/`) before the first commit; each executed notebook and run copy was checked against its `run_summary.json` before any edit.
+
+| File (under `docs/verification/2026-10-26-colab-t4/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `bart_zero_shot_classification_colab_45afae5_colab-cli-t4_default.ipynb` | `2b5bcf0e2261ea193f55b06336681c288085db99664e332aa8cdc61b4d83b53d` | `2b5bcf0e2261ea193f55b06336681c288085db99664e332aa8cdc61b4d83b53d` (unchanged, no local path) |
+| `exec.log` | `4ed8d6d8b7f768e636c569945460f43e75d5813607086ee8f4ca3ada5b897938` | `10ba46d9f7cd43615925ed225dfe2679abc57d8b05b7d83f706105dbab1981a2` (2 local-path replacements) |
+| `run_summary.json` | `82d13b9083653b1e0c08f04b1447bfb11002259d5f5e91193febd2cd8d5d41e2` | `82d13b9083653b1e0c08f04b1447bfb11002259d5f5e91193febd2cd8d5d41e2` (unchanged, no local path) |
+
+| File (under `docs/verification/2026-10-26-colab-t4-refusal/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `bart_zero_shot_classification_colab_45afae5_colab-cli-t4_refusal.ipynb` | `842cffa1d43fca991a91516d24ce7d626a39fe72f9be2b82d006f71c8bc53063` | `842cffa1d43fca991a91516d24ce7d626a39fe72f9be2b82d006f71c8bc53063` (unchanged, no local path) |
+| `exec.log` | `9fdbf9e0552cb26e9778b89d9dd623ec5f6156a984923dbf72977e65091fa8be` | `e283aa88127641e052a18075cd63e011342d8f245bcaec10f68048c748fcbffa` (2 local-path replacements) |
+| `run_summary.json` | `a7f315ad68ec8b1c10ed90e82c5177d7a74c2083f5ea247be51e4497d76ffe5d` | `a7f315ad68ec8b1c10ed90e82c5177d7a74c2083f5ea247be51e4497d76ffe5d` (unchanged, no local path) |
+| `run_copy.ipynb` | `578f109ae5ba08a8a93514af194b33d501219d89e292f0eba5e70ac3a8788016` | `578f109ae5ba08a8a93514af194b33d501219d89e292f0eba5e70ac3a8788016` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input (REL12) and a browser `Run all` of the interactive journeys (REL2).
+
 ## Current status
 
-**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The 2026-10-03 review fixes (section above) produced a new blob (`7c6a436f` at `ee128d2`), so that PASS no longer covers the current notebook; a hosted Colab T4 run of the new blob is recorded: default path, 15/15 code cells in one pass with no restart and 0 errors (Colab CLI sequential execution, not a browser `Run all`). The notebook stays Candidate pending a BYOD positive and negative run, an optional-experiment re-run and the set C activity, an equivalent Kaggle run, maintainer review of that evidence, review of the paraphrased description set B, and an exercised BYOD path. The local pre-flights of the revised notebook are recorded below it. The DAT20 refusal fix (2026-10-26, code commit `43d91eb`) produced a new blob (`90ff8e07`): the hosted runs of `7c6a436f` are history for it, and hosted runs of `90ff8e07` (the default path and a scripted BYOD refusal) are pending.
+**Candidate.** The notebook was upgraded on 2026-09-27 into a guided curriculum unit (see "Guided upgrade, 2026-09-27" below). The earlier Release-grade evidence — blob `f85282d2` at `5ecf2f2`, clean Kaggle Tesla T4 run on 2026-09-19 — remains above as history and does not qualify the revised notebook. A clean Colab T4 `Run all` of the revised blob (`f652fd671322` at `6141d4f`) passed on 2026-09-27 and is recorded in the first row of the table above. The 2026-10-03 review fixes (section above) produced a new blob (`7c6a436f` at `ee128d2`), so that PASS no longer covers the current notebook; a hosted Colab T4 run of the new blob is recorded: default path, 15/15 code cells in one pass with no restart and 0 errors (Colab CLI sequential execution, not a browser `Run all`). That 2026-10-03 run is history for the current blob. The local pre-flights of the revised notebook are recorded below it. The DAT20 refusal fix (2026-10-26, code commit `43d91eb`) produced a new blob (`90ff8e07`): the hosted runs of `7c6a436f` are history for it, and on 2026-10-26 its default path (15 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/content/sample_data/california_housing_test.csv`: exactly one `Refused:` line at cell `bart_zero_shot_classification-17`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates are REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); earlier blobs' runs are history (REL14).
