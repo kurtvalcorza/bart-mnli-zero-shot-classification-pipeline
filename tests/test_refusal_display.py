@@ -195,6 +195,64 @@ def test_the_accepted_byod_file_still_runs_the_cell(section4, tmp_path):
     assert ns["data_source"] == "BYOD (local.csv)" and len(ns["train_records"]) == 8 and "'token_budget'" in out
 
 
+# ---- the catch is narrow: only bad input is refused; an internal TypeError/OSError keeps its traceback ------------
+
+
+def test_the_byod_catch_is_narrow_in_the_notebook_source():
+    src = CELLS[SEC4].split("write_dataset_csv(", 1)[0]  # the BYOD try block; the probes below it are a separate demo
+    assert "except (TypeError" not in src and "except TypeError" not in src
+    assert src.count("except OSError as exc:") == 1
+    assert re.search(r"try:\n            records = load_byod_dataset\(byod_path\)\n        except OSError as exc:\n", src)
+    assert "\nexcept ValueError as exc:\n    if not USE_BYOD:\n        raise" in src
+
+
+def test_an_unreadable_byod_file_is_still_one_refused_line(section4, tmp_path):
+    path = tmp_path / "locked.csv"
+    path.write_bytes(_csv(_records({"category a": 6, "category b": 6})))
+
+    def unreadable(_path):
+        raise PermissionError(13, "Permission denied", str(_path))
+
+    section4.ns["load_byod_dataset"] = unreadable
+    line = _refusal(section4, {"USE_BYOD": True, "BYOD_PATH": str(path)})
+    assert line.startswith("Refused: locked.csv: the file cannot be read (PermissionError: "), line
+    assert line.endswith("Fix the file, then select this cell and choose Runtime → Run after."), line
+
+
+@pytest.mark.parametrize("error", [TypeError("internal helper bug"), OSError("internal I/O bug")])
+def test_an_internal_error_after_the_loader_keeps_its_traceback(section4, tmp_path, error):
+    import traceback
+
+    path = tmp_path / "local.csv"
+    path.write_bytes(_csv(_records({"category a": 6, "category b": 6})))
+
+    def broken_token_count(text, labels, *, hypothesis_template):
+        raise error
+
+    section4.ns["pipe"].count_pair_tokens = broken_token_count
+    try:
+        with pytest.raises(type(error)) as info:
+            section4({"USE_BYOD": True, "BYOD_PATH": str(path)})
+    finally:
+        del section4.ns["pipe"].count_pair_tokens
+    assert info.value is error and not getattr(info.value, "dimer_refusal", False)
+    rendered = "".join(traceback.format_exception(info.value))
+    assert rendered.startswith("Traceback") and "broken_token_count" in rendered and "Refused:" not in rendered
+
+
+def test_a_typeerror_inside_the_loader_is_not_turned_into_a_refusal(section4, tmp_path):
+    path = tmp_path / "local.csv"
+    path.write_bytes(_csv(_records({"category a": 6, "category b": 6})))
+
+    def buggy_loader(_path):
+        raise TypeError("loader bug")
+
+    section4.ns["load_byod_dataset"] = buggy_loader
+    with pytest.raises(TypeError, match="loader bug") as info:
+        section4({"USE_BYOD": True, "BYOD_PATH": str(path)})
+    assert not getattr(info.value, "dimer_refusal", False)
+
+
 # ---- the router: a refusal crosses the worker boundary as one line; a genuine error keeps its traceback -----
 
 
