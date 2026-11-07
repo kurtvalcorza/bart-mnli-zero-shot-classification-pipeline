@@ -1,0 +1,72 @@
+{
+  "repo": "bart-mnli-zero-shot-classification-pipeline",
+  "sha": "b6de72d0dcbfe316beec7a2ce42f82284311ea1c",
+  "notebook": "tutorials/bart_zero_shot_classification_colab.ipynb",
+  "blob": "1a77f97b9f93f38a7528dbb76e38b1759e24ef40",
+  "gpu": "T4",
+  "session": "suite-bart-b6de72d-88df",
+  "started_utc": "2026-11-02T13:09:06+00:00",
+  "runner": "Colab CLI `colab exec -f` on a fresh session (not a browser Run all)",
+  "overrides": [
+    {
+      "name": "USE_BYOD",
+      "from": "False",
+      "to": "True"
+    },
+    {
+      "name": "BYOD_PATH",
+      "from": "''",
+      "to": "'/content/sample_data/california_housing_test.csv'"
+    }
+  ],
+  "run_copy_blob": "2a68dce1f03206172cf688d5906b130f5b5b47b3",
+  "run_copy_sha256": "71435cf477da9ba284b5c6e12e3caec29b07816ec8607983ac709059e8b51e16",
+  "run_copy_note": "refusal run: the run copy is the committed notebook with the listed assignment overrides, cut immediately after the refusal cell and re-serialised (nbformat layout); input_unchanged compares against that copy",
+  "truncated_after_cell": "bart_zero_shot_classification-17",
+  "refusal_cell_ref": "bart_zero_shot_classification-17",
+  "refusal_cell_index": 8,
+  "cells_dropped": 15,
+  "code_cells_dropped": 7,
+  "original_sha256": "e7f3d3181152d430146c1889e1f1d3eb4d99c7678357c474e6db53d0598f64b4",
+  "status": "[suite-bart-b6de72d-88df] gpu-t4-s-usw4a0-21sde1rj57twg | Hardware: T4 | Shape: Standard | Variant: GPU | Status: IDLE",
+  "exec_exit_code": 0,
+  "stopped": true,
+  "stop_verified": true,
+  "wall_s": 110.2,
+  "input_unchanged": true,
+  "executed_file": "bart_zero_shot_classification_colab_b6de72d_colab-cli-t4_output.ipynb",
+  "log_cells": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "log_total": 8,
+  "code_cells": 8,
+  "executed_cells": 5,
+  "errors": [
+    {
+      "cell": "bart_zero_shot_classification-17",
+      "ename": "IsolatedCellRefusal",
+      "evalue": "california_housing_test.csv: CSV is missing columns ['id', 'label', 'text']. Fix the file, then select this cell and choose Runtime \u2192 Run after."
+    }
+  ],
+  "execution_counts": [],
+  "sequential": null,
+  "executed_sha256": "598310ce35774ade9d3e720cc76181dcccd6d64e3885251f63e66eab6e2e40de",
+  "log_sequential_complete": true,
+  "mode": "expect_refusal",
+  "refusal_line": "Refused: california_housing_test.csv: CSV is missing columns ['id', 'label', 'text']. Fix the file, then select this cell and choose Runtime \u2192 Run after.",
+  "halting_cell_index": 8,
+  "halting_cell_id": "bart_zero_shot_classification-17",
+  "error_cells": [
+    8
+  ],
+  "refusal_fail_reasons": [],
+  "refusal_ok": true,
+  "verdict": "PASS"
+}
